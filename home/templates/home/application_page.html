@@ -1,0 +1,339 @@
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function toggleFields() {
+        const typeSelect = document.getElementById("id_innovation_type");
+        const selectedType = typeSelect.value;
+
+        // Скрываем все блоки
+        document.querySelectorAll(".extra-field").forEach(field => {
+            field.style.display = "none";
+        });
+
+        // Показываем нужный блок
+        if (selectedType) {
+            const activeBlock = document.getElementById(selectedType + "_fields");
+            if (activeBlock) {
+                activeBlock.style.display = "block";
+                // Активируем обязательные поля
+                activeBlock.querySelectorAll('[data-required]').forEach(input => {
+                    input.required = true;
+                });
+            }
+        }
+    }
+
+    document.getElementById("id_innovation_type").addEventListener("change", toggleFields);
+    toggleFields(); // Инициализация при загрузке
+});
+</script>
+<script>
+    document.getElementById('id_scientific_product_type').addEventListener('change', function() {
+    const value = this.value;
+    document.getElementById('patent_hint').style.display = (value === 'product_2' || value === 'product_3') ? 'block' : 'none';
+});
+</script>
+<script>
+    document.getElementById('id_readiness_level').addEventListener('change', function() {
+    const value = parseInt(this.value);
+    document.getElementById('readiness_error').style.display = value < 4 ? 'block' : 'none';
+}); 
+</script>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <!-- Общие поля -->
+    <div>{{ form.title.label_tag }}{{ form.title }}</div>
+    <div>{{ form.phone.label_tag }}{{ form.phone }}</div>
+    <div>{{ form.description.label_tag }}{{ form.description }}</div>
+    <div>{{ form.innovation_type.label_tag }}{{ form.innovation_type }}</div>
+
+    <!-- Образовательная инновация -->
+    <div id="educational_fields" class="extra-field">
+        <div class="field-group">
+            {{ form.authors.label_tag }}
+            {{ form.authors }}
+        </div>
+        
+        <div class="field-group">
+            {{ form.product_type.label_tag }}
+            {{ form.product_type }}
+        </div>
+
+        <div class="field-group">
+            {{ form.usage_type.label_tag }}
+            {{ form.usage_type }}
+        </div>
+
+        <div class="field-group">
+            {{ form.resource_link.label_tag }}
+            {{ form.resource_link }}
+        </div>
+
+        <div class="field-group">
+            {{ form.educational_files.label_tag }}
+            {{ form.educational_files }}
+        </div>
+    </div>
+
+    <!-- Scientific Innovation Fields -->
+    <div id="scientific_fields" class="extra-field">
+        <!-- Подсказки для типов продуктов -->
+        <div id="product_hints" style="display: none;">
+            <div class="product-hint" data-product="product_1">
+                <small>Инновации в результатах ОКР: оборудование, ПО, установки и др.</small>
+            </div>
+            <div class="product-hint" data-product="product_2">
+                <small>Технологические услуги: испытания, сварка, покрытие и т.д.</small>
+            </div>
+            <div class="product-hint" data-product="product_3">
+                <small>Инжиниринг: проектирование, дизайн, расчеты, ТЭО и др.</small>
+            </div>
+            <!-- Аналогично для других продуктов -->
+        </div>
+        <div>
+            {{ form.scientific_product_type.label_tag }}
+            {{ form.scientific_product_type }}
+            <small style="color:gray;">– продукт 1: инновации в результатах ОКР (оборудование,
+приборы, установки, устройства, технологии производства
+новых материалов, обработки материалов, нанесения по-
+крытий, созданное программное обеспечение и т.д.), внед-
+ренные у индустриального партнера.</small>
+<small style="color:gray;">– продукт 2: инновация в оказании технологических услуг
+индустриальному партнеру (проведение испытаний и опре-
+деление свойств материалов, разработка и испытание техно-
+логий сварки, послойной направки, металлообработки,
+нанесения покрытий и т.д.), зафиксированная в виде «ноу-
+хау», патента на изобретение или полезную модель, свиде-
+тельства о регистрации базы данных или программы для
+ЭВМ.</small>
+<small style="color:gray;">– продукт 3: инновация в оказании инжиниринговых услуг
+индустриальному партнеру (проектирование, разработка
+дизайна, выполнение расчетов, технико-экономическое
+обоснование), зафиксированная в виде «ноу-хау», патента
+на изобретение или полезную модель, свидетельства о реги-
+страции базы данных или программы для ЭВМ.</small>
+        </div>
+        <div>
+            {{ form.patents_links.label_tag }}
+            {{ form.patents_links }}
+            <small style="color:gray;">
+                Для «продукта 2: инновация в оказании технологических
+услуг индустриальному партнеру» и «продукта 3: иннова-
+ция в оказании инжиниринговых услуг индустриальному
+партнеру» обязательно указываются название и номер па-
+тента/свидетельства или номер и дата приказа об установле-
+нии режима коммерческой тайны.
+            </small>
+        </div>
+        
+
+        <div>
+            {{ form.readiness_level.label_tag }}
+            {{ form.readiness_level }}
+            <small style="color:gray;">
+                Для продукта 1: инновации в результатах ОКР обязательно
+указывается значение уровня готовности в соответствии с
+ГОСТ Р 58048-2017 «Трансфер технологий. Методические
+указания по оценке уровня зрелости технологий». Минимальный уровень готовности равен 4.
+            </small>
+        </div>
+        <div>
+            {{ form.department.label_tag }}
+            {{ form.department }}
+        </div>
+        
+        <!-- Поле уровня готовности с условием -->
+        <div id="readiness_level_field" style="display:none;">
+            {{ form.readiness_level.label_tag }}
+            {{ form.readiness_level }}
+            <small style="color:gray;">ГОСТ Р 58048-2017. Минимальный уровень готовности - 4</small>
+            <div id="readiness_error" style="color: red; display: none;">Уровень готовности должен быть не ниже 4</div>
+        </div>
+        <!-- Новые поля -->
+        <div>{{ form.scientific_group.label_tag }}{{ form.scientific_group }}</div>
+        <div>{{ form.pni_project.label_tag }}{{ form.pni_project }}</div>
+        <div>{{ form.implementation_date.label_tag }}{{ form.implementation_date }}</div>
+            <!-- Новые поля для научно‑технической инновации -->
+        <div class="field-group">
+            {{ form.development_basis.label_tag }}
+            {{ form.development_basis }}
+            
+        </div>
+        <div class="field-group">
+            {{ form.customer.label_tag }}
+            {{ form.customer }}
+            
+        </div>
+        <div class="field-group">
+            {{ form.authors.label_tag }}
+            {{ form.authors }}
+            
+        </div>
+        <div class="field-group">
+            {{ form.development_description.label_tag }}
+            {{ form.development_description }}
+            
+        </div>
+        <div class="field-group">
+            {{ form.comparison_advantages.label_tag }}
+            {{ form.comparison_advantages }}
+            
+        </div>
+        <div class="field-group">
+            {{ form.replication_assessment.label_tag }}
+            {{ form.replication_assessment }}
+            
+        </div>
+        <div>
+            {{ form.scientific_files.label_tag }}
+            {{ form.scientific_files }}
+            <small style="color:gray;">Состав обязательных прикрепляемых документов:</small>
+            <small style="color:gray;">скан-копии подписанных индустриальным партнером актов выполненных работ или
+актов к лицензионному договору,</small>
+            <small style="color:gray;">для «продукта 2: инновация в оказании технологических услуг индустриальному парт-
+неру» и «продукта 3: инновация в оказании инжиниринговых услуг индустриальному парт-
+неру» дополнительно обязательно прикладывается документ, подтверждающий факт создания
+и регистрации РИД в рамках выполненной работы (приказ о признании сведений секретом
+производства («ноу-хау»), патент или свидетельство о регистрации базы данных/программы
+для ЭВМ).</small>
+            <small style="color:gray;">в случае осуществления тиражирования дополнительно прикладывается заключение о
+внедрении инновации или о тиражировании инновации.</small>
+        </div>
+
+
+    </div>
+
+    <!-- Process Innovation Fields -->
+    <div id="process_fields" class="extra-field">
+        <div>
+            {{ form.process_innovation_type.label_tag }}
+            {{ form.process_innovation_type }}
+        </div>
+        <div>
+            {{ form.implementation_steps.label_tag }}
+            {{ form.implementation_steps }}
+        </div>
+        <div>
+            {{ form.process_files.label_tag }}
+            {{ form.process_files }}
+        </div>
+    </div>
+
+    <!-- Proposal Innovation Fields -->
+    <div id="proposal_fields" class="extra-field">
+        <div>
+            {{ form.problem_description.label_tag }}
+            {{ form.problem_description }}
+        </div>
+        <div>
+            {{ form.solution.label_tag }}
+            {{ form.solution }}
+        </div>
+        <div>
+            {{ form.expected_effects.label_tag }}
+            {{ form.expected_effects }}
+        </div>
+        <div>
+            {{ form.proposal_files.label_tag }}
+            {{ form.proposal_files }}
+
+        </div>
+    </div>
+
+    <button type="submit">Отправить</button>
+</form>
+
+<script>
+// Показ подсказок для типов продуктов
+    document.getElementById('id_scientific_product_type').addEventListener('change', function() {
+    const productType = this.value;
+    document.querySelectorAll('.product-hint').forEach(hint => {
+        hint.style.display = hint.dataset.product === productType ? 'block' : 'none';
+    });
+    
+    // Поле уровня готовности только для product_1
+    document.getElementById('readiness_level_field').style.display = 
+        productType === 'product_1' ? 'block' : 'none';
+});
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+    // Отключаем отправку формы, если выбран пустой тип заявки
+    const form = document.querySelector("form");
+    form.addEventListener("submit", function(e) {
+        const select = document.getElementById("id_innovation_type");
+        if (!select.value) {
+            alert("Пожалуйста, выберите тип заявки.");
+            e.preventDefault();
+        }
+    });
+
+    // Скрытие пустого option
+    document.querySelectorAll("select").forEach(select => {
+        const first = select.querySelector("option[value='']");
+        if (first) first.style.display = "none";
+    });
+});
+</script>
+<style>
+    /* Сохраняем оригинальные стили */
+    form {
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    div {
+        margin-bottom: 15px;
+    }
+    
+    label {
+        font-weight: bold;
+        display: block;
+    }
+
+    label[required]::after {
+        content: " *";
+        color: red;
+    }
+    input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-top: 5px;
+    }
+
+    small {
+        display: block;
+        color: gray;
+        margin-top: 5px;
+    }
+
+    .extra-field {
+        display: none;
+        padding: 15px;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    button {
+        width: 100%;
+        background: #007BFF;
+        color: white;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-top: 20px;
+    }
+
+    button:hover {
+        background: #0056b3;
+    }
+</style>

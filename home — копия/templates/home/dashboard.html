@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1>Добро пожаловать, {{ user.username }}!</h1>
+  <p>Ваш профиль:</p>
+  <ul>
+    <li>Имя: {{ user.first_name }}</li>
+    <li>Фамилия: {{ user.last_name }}</li>
+    <li>Отчество: {{ user.profile.middle_name }}</li>
+    <li>Номер телефона: {{ user.profile.phone }}</li>
+  </ul>
+  <a href="{% url 'edit_profile' %}" class="btn btn-secondary">Редактировать профиль</a>
+</div>
+{% endblock %}

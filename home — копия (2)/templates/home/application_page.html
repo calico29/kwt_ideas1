@@ -1,0 +1,187 @@
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    function toggleFields() {
+        const typeSelect = document.getElementById("id_innovation_type");
+        const selectedType = typeSelect.value;
+
+        // Скрываем все блоки
+        document.querySelectorAll(".extra-field").forEach(field => {
+            field.style.display = "none";
+        });
+
+        // Показываем нужный блок
+        if (selectedType) {
+            const activeBlock = document.getElementById(selectedType + "_fields");
+            if (activeBlock) {
+                activeBlock.style.display = "block";
+                // Активируем обязательные поля
+                activeBlock.querySelectorAll('[data-required]').forEach(input => {
+                    input.required = true;
+                });
+            }
+        }
+    }
+
+    document.getElementById("id_innovation_type").addEventListener("change", toggleFields);
+    toggleFields(); // Инициализация при загрузке
+});
+</script>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <!-- Общие поля -->
+    <div>{{ form.title.label_tag }}{{ form.title }}</div>
+    <div>{{ form.phone.label_tag }}{{ form.phone }}</div>
+    <div>{{ form.description.label_tag }}{{ form.description }}</div>
+    <div>{{ form.innovation_type.label_tag }}{{ form.innovation_type }}</div>
+
+    <!-- Образовательная инновация -->
+    <div id="educational_fields" class="extra-field">
+        <div class="field-group">
+            {{ form.authors.label_tag }}
+            {{ form.authors }}
+        </div>
+        
+        <div class="field-group">
+            {{ form.product_type.label_tag }}
+            {{ form.product_type }}
+        </div>
+
+        <div class="field-group">
+            {{ form.usage_type.label_tag }}
+            {{ form.usage_type }}
+        </div>
+
+        <div class="field-group">
+            {{ form.resource_link.label_tag }}
+            {{ form.resource_link }}
+        </div>
+
+        <div class="field-group">
+            {{ form.educational_files.label_tag }}
+            {{ form.educational_files }}
+        </div>
+    </div>
+
+    <!-- Scientific Innovation Fields -->
+    <div id="scientific_fields" class="extra-field">
+        <div>
+            {{ form.scientific_product_type.label_tag }}
+            {{ form.scientific_product_type }}
+        </div>
+        <div>
+            {{ form.patents_links.label_tag }}
+            {{ form.patents_links }}
+        </div>
+        <div>
+            {{ form.readiness_level.label_tag }}
+            {{ form.readiness_level }}
+        </div>
+        <div>
+            {{ form.department.label_tag }}
+            {{ form.department }}
+        </div>
+        <div>
+            {{ form.scientific_files.label_tag }}
+            {{ form.scientific_files }}
+        </div>
+    </div>
+
+    <!-- Process Innovation Fields -->
+    <div id="process_fields" class="extra-field">
+        <div>
+            {{ form.process_innovation_type.label_tag }}
+            {{ form.process_innovation_type }}
+        </div>
+        <div>
+            {{ form.implementation_steps.label_tag }}
+            {{ form.implementation_steps }}
+        </div>
+        <div>
+            {{ form.process_files.label_tag }}
+            {{ form.process_files }}
+        </div>
+    </div>
+
+    <!-- Proposal Innovation Fields -->
+    <div id="proposal_fields" class="extra-field">
+        <div>
+            {{ form.problem_description.label_tag }}
+            {{ form.problem_description }}
+        </div>
+        <div>
+            {{ form.solution.label_tag }}
+            {{ form.solution }}
+        </div>
+        <div>
+            {{ form.expected_effects.label_tag }}
+            {{ form.expected_effects }}
+        </div>
+        <div>
+            {{ form.proposal_files.label_tag }}
+            {{ form.proposal_files }}
+        </div>
+    </div>
+
+    <button type="submit">Отправить</button>
+</form>
+
+<style>
+    /* Сохраняем оригинальные стили */
+    form {
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    div {
+        margin-bottom: 15px;
+    }
+    
+    label {
+        font-weight: bold;
+        display: block;
+    }
+    
+    input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-top: 5px;
+    }
+
+    small {
+        display: block;
+        color: gray;
+        margin-top: 5px;
+    }
+
+    .extra-field {
+        display: none;
+        padding: 15px;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    button {
+        width: 100%;
+        background: #007BFF;
+        color: white;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-top: 20px;
+    }
+
+    button:hover {
+        background: #0056b3;
+    }
+</style>

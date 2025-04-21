@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Модерация заявок</h1>
+<p>Список заявок на проверку:</p>
+<ul>
+    {% for application in applications %}
+        <li>
+            <a href="{% url 'view_application' application.id %}">{{ application.title }}</a>
+            - Автор: {{ application.author.username }}
+            - Статус: {{ application.get_status_display }}
+            - Дата создания: {{ application.created_at|date:"d.m.Y" }}
+            - <a href="{% url 'assign_expert' application.id %}">Назначить эксперта</a>
+        </li>
+    {% empty %}
+        <p>Нет заявок на проверку</p>
+    {% endfor %}
+</ul>
+{% endblock %}

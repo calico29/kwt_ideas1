@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Главная - КВт идей{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <!-- Герой-секция -->
+    <div class="hero-section text-center mb-5 py-5 rounded-4" 
+         style="background: linear-gradient(135deg, #0078D7, #005A9E);">
+        <h1 class="display-4 text-white mb-3 fw-bold">
+            <i class="fas fa-lightbulb me-3"></i>Платформа инноваций СФ МЭИ
+        </h1>
+        <p class="lead text-light mb-4 mx-auto" style="max-width: 700px;">
+            Профессиональная система для сбора, экспертизы и внедрения инновационных решений 
+            в образовательной и научной деятельности университета
+        </p>
+        {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="btn btn-light btn-lg px-5">
+                <i class="fas fa-rocket me-2"></i>В личный кабинет
+            </a>
+        {% else %}
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="{% url 'account_login' %}" class="btn btn-light btn-lg px-5">
+                    Войти в систему
+                </a>
+                <a href="{% url 'account_signup' %}" class="btn btn-outline-light btn-lg px-5">
+                    Регистрация
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Преимущества системы -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 hover-card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-check-circle fa-2x mb-3"></i>
+                    <h3>Просто и удобно</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3"><i class="fas fa-clock text-primary me-2"></i>Экономия времени</li>
+                        <li class="mb-3"><i class="fas fa-mobile-alt text-primary me-2"></i>Доступ с любого устройства</li>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 hover-card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-shield-alt fa-2x mb-3"></i>
+                    <h3>Безопасность</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3"><i class="fas fa-lock text-primary me-2"></i>Двухфакторная аутентификация</li>
+                        <li class="mb-3"><i class="fas fa-database text-primary me-2"></i>Резервное копирование</li>
+                        <li><i class="fas fa-user-shield text-primary me-2"></i>Защита персональных данных</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 hover-card">
+                <div class="card-header bg-primary text-white">
+                    <i class="fas fa-comments fa-2x mb-3"></i>
+                    <h3>Коммуникация</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-3"><i class="fas fa-comment-dots text-primary me-2"></i>Встроенный чат</li>
+                        <li class="mb-3"><i class="fas fa-bell text-primary me-2"></i>Уведомления о статусах</li>
+                        
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Как это работает -->
+    <div class="info-section bg-primary-soft rounded-4 p-5 mb-5">
+        <h2 class="text-primary mb-4 text-center">3 шага к успешной реализации</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="timeline">
+                    <div class="timeline-step">
+                        <div class="timeline-icon bg-primary text-white">
+                            <i class="fas fa-pencil-alt"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h4>Заполнение заявки</h4>
+                            <p class="text-muted">Интуитивная форма подачи с подсказками и примерами</p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-step">
+                        <div class="timeline-icon bg-primary text-white">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h4>Экспертная оценка</h4>
+                            <p class="text-muted">Прозрачный процесс рассмотрения с обратной связью</p>
+                        </div>
+                    </div>
+                    
+                    <div class="timeline-step">
+                        <div class="timeline-icon bg-primary text-white">
+                            <i class="fas fa-check-double"></i>
+                        </div>
+                        <div class="timeline-content">
+                            <h4>Реализация проекта</h4>
+                            <p class="text-muted">Поддержка на всех этапах внедрения инновации</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hero-section {
+        padding: 4rem 2rem;
+        box-shadow: 0 4px 20px rgba(0, 120, 215, 0.15);
+    }
+
+    .hover-card {
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 120, 215, 0.1);
+    }
+    
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 120, 215, 0.15);
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 40px;
+    }
+
+    .timeline-step {
+        position: relative;
+        margin-bottom: 3rem;
+        padding-left: 60px;
+    }
+
+    .timeline-icon {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .timeline-content {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .bg-primary-soft {
+        background-color: rgba(0, 120, 215, 0.08);
+    }
+
+    @media (max-width: 768px) {
+        .timeline-step {
+            padding-left: 0;
+            margin-bottom: 2rem;
+        }
+        
+        .timeline-icon {
+            position: static;
+            margin-bottom: 1rem;
+        }
+        
+        .timeline-content {
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}

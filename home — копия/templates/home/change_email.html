@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Смена Email{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-warning text-white">
+      <h3>Сменить Email</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <!-- Если код еще не отправлен, показываем поле нового email и кнопку отправки кода -->
+        {% if not request.session.email_change_code %}
+        <div class="mb-3">
+          <label for="id_new_email" class="form-label">Новый Email</label>
+          <input type="email" name="new_email" class="form-control" id="id_new_email" placeholder="Введите новый email" required>
+        </div>
+        <button type="submit" name="send_code" class="btn btn-outline-primary">Отправить код подтверждения</button>
+        {% else %}
+        <!-- Если код уже отправлен, показываем поле для ввода кода -->
+        <div class="mb-3">
+          <label for="id_new_email" class="form-label">Новый Email</label>
+          <input type="email" name="new_email" class="form-control" id="id_new_email" value="{{ request.session.pending_new_email }}" readonly>
+        </div>
+        <div class="mb-3">
+          <label for="id_confirmation_code" class="form-label">Код подтверждения</label>
+          <input type="text" name="confirmation_code" class="form-control" id="id_confirmation_code" placeholder="Введите полученный код" required>
+          {% if form.confirmation_code.errors %}
+            <div class="text-danger">{{ form.confirmation_code.errors }}</div>
+          {% endif %}
+        </div>
+        <button type="submit" name="confirm_change" class="btn btn-primary">Подтвердить смену Email</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

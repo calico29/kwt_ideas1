@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% load chat_tags %}
+{% load app_filters %}
+{% block content %}
+<div class="container application-detail">
+    <div class="application-info">
+        <h1>{{ application.title }}</h1>
+        
+        <!-- Общая информация -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Общая информация</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Статус:</strong> {{ application.get_status_display }}</p>
+                <p><strong>Автор:</strong> {{ application.author.get_full_name|default:application.author.username }}</p>
+                <p><strong>Дата создания:</strong> {{ application.created_at|date:"d.m.Y H:i" }}</p>
+                <p><strong>Дата обновления:</strong> {{ application.updated_at|date:"d.m.Y H:i" }}</p>
+                <p><strong>Тип инновации:</strong> {{ application.get_innovation_type_display }}</p>
+                <p><strong>Описание:</strong> {{ application.description }}</p>
+                <p><strong>Контактный телефон:</strong> {{ application.phone|default:"Не указан" }}</p>
+                
+                {% if application.expert %}
+                    <p><strong>Эксперт:</strong> {{ application.expert.get_full_name|default:application.expert.username }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Специфичные поля для каждого типа инновации -->
+        {% if application.innovation_type == 'educational' %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Образовательная инновация</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Авторы:</strong> {{ application.authors|default:"Не указаны" }}</p>
+                    <p><strong>Тип продукта:</strong> {{ application.get_product_type_display|default:"Не указан" }}</p>
+                    <p><strong>Для чего разработана:</strong> {{ application.usage_type|default:"Не указано" }}</p>
+                    <p><strong>Ссылка на ресурс:</strong> 
+                        {% if application.resource_link %}
+                            <a href="{{ application.resource_link }}" target="_blank">{{ application.resource_link }}</a>
+                        {% else %}
+                            Не указана
+                        {% endif %}
+                    </p>
+                    {% if application.educational_files.exists %}
+                        <p><strong>Материалы ЭУМК:</strong></p>
+                        <ul>
+                            {% for file in application.educational_files.all %}
+                                <li><a href="{{ file.file.url }}" download>{{ file.file.name|cut:"attachments/" }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        
+        {% elif application.innovation_type == 'scientific' %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Научно-техническая инновация</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Тип продукта:</strong> {{ application.get_scientific_product_type_display|default:"Не указан" }}</p>
+                    <p><strong>Ссылки на патенты и статьи:</strong> {{ application.patents_links|default:"Не указаны" }}</p>
+                    <p><strong>Уровень готовности:</strong> {{ application.readiness_level|default:"Не указан" }}</p>
+                    <p><strong>Кафедра/лаборатория:</strong> {{ application.department|default:"Не указана" }}</p>
+                    {% if application.scientific_files.exists %}
+                        <p><strong>Научные материалы:</strong></p>
+                        <ul>
+                            {% for file in application.scientific_files.all %}
+                                <li><a href="{{ file.file.url }}" download>{{ file.file.name|cut:"attachments/" }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        
+        {% elif application.innovation_type == 'process' %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Процессная инновация</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Тип инновации:</strong> {{ application.get_process_innovation_type_display|default:"Не указан" }}</p>
+                    <p><strong>Описание процесса внедрения:</strong> {{ application.implementation_steps|default:"Не указано" }}</p>
+                    {% if application.process_files %}
+                        <p><strong>Заключение о внедрении:</strong> 
+                            <a href="{{ application.process_files.url }}" download>{{ application.process_files.name|cut:"process_files/" }}</a>
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        
+        {% elif application.innovation_type == 'proposal' %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Инновационное предложение</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Описание проблемы:</strong> {{ application.problem_description|default:"Не указано" }}</p>
+                    <p><strong>Предлагаемое решение:</strong> {{ application.solution|default:"Не указано" }}</p>
+                    <p><strong>Ожидаемые эффекты:</strong> {{ application.expected_effects|default:"Не указано" }}</p>
+                    {% if application.proposal_files.exists %}
+                        <p><strong>Дополнительные документы:</strong></p>
+                        <ul>
+                            {% for file in application.proposal_files.all %}
+                                <li><a href="{{ file.file.url }}" download>{{ file.file.name|cut:"attachments/" }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Оценка эксперта (если есть) -->
+        {% if application.total_score is not None %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Экспертная оценка</h3>
+                </div>
+                <div class="card-body">
+                    <p><strong>Итоговая оценка:</strong> {{ application.total_score }}</p>
+                    <p><strong>Обоснование оценки:</strong> {{ application.comments|default:"Не указано" }}</p>
+                    <p><strong>Решение:</strong> {{ application.get_decision_display|default:"Не принято" }}</p>
+                    {% if application.additional_questions %}
+                        <p><strong>Дополнительные вопросы к автору:</strong> {{ application.additional_questions }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Чат по заявке -->
+ 
+    
+   <!-- Блок чатов -->
+    <div class="chat-container card mt-4">
+        <!-- Заголовки вкладок -->
+        <div class="card-header p-0">
+            <ul class="nav nav-tabs" id="chatTabs" role="tablist">
+                {% for chat_type, data in chat_data.items %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link {% if chat_type == active_chat %}active{% endif %}" 
+                       id="{{ chat_type }}-tab" data-bs-toggle="tab" data-bs-target="#{{ chat_type }}-content"
+                       type="button" role="tab">
+                        {{ data.name }}
+                        {% if data.unread_count > 0 %}
+                        <span class="badge bg-danger rounded-pill ms-1">
+                            {{ data.unread_count }}
+                        </span>
+                        {% endif %}
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <!-- Содержимое вкладок -->
+        <div class="card-body p-0">
+            <div class="tab-content" id="chatTabsContent">
+                {% for chat_type, data in chat_data.items %}
+                <div class="tab-pane fade {% if chat_type == active_chat %}show active{% endif %}" 
+                     id="{{ chat_type }}-content" role="tabpanel">
+                    
+                    <div class="message-list mb-3" id="message-list-{{ chat_type }}" 
+                         style="max-height: 400px; overflow-y: auto;">
+                        {% for message in data.messages %}
+                        <div class="message {% if message.sender == request.user %}sent{% else %}received{% endif %} mb-2">
+                            <div class="message-header">
+                                <strong>{{ message.sender.username }}</strong>
+                                <small>{{ message.timestamp|date:"d.m.Y H:i" }}</small>
+                            </div>
+                            <div class="message-body">
+                                {{ message.message|safe }}
+                                {% for att in message.attachments.all %}
+                                    <div class="mt-2">
+                                        {% if att.is_empty %}
+                                            <span class="text-danger">
+                                                <i class="fas fa-exclamation-triangle"></i> Файл поврежден или пуст
+                                            </span>
+                                        {% else %}
+                                            <a href="{{ att.get_protected_url }}" target="_blank" class="text-decoration-none">
+                                                <i class="fas fa-paperclip"></i> 
+                                                {{ att.file.name|truncatechars:30 }}
+                                                ({{ att.file.size|filesizeformat }})
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <form method="post" action="{% url 'view_application' application.id %}" class="message-form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="chat_type" value="{{ chat_type }}">
+                        <div class="input-group">
+                            <textarea name="message" class="form-control" placeholder="Введите сообщение..." rows="2"></textarea>
+                            <label class="btn btn-secondary">
+                                <i class="fas fa-paperclip"></i>
+                                <input type="file" name="file" style="display: none;" multiple>
+                            </label>
+                            <button type="submit" name="send_message" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div id="file-info-{{ chat_type }}" class="small text-muted mt-1"></div>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Показываем имена выбранных файлов
+document.querySelectorAll('input[type="file"]').forEach(input => {
+    input.addEventListener('change', function() {
+        const fileInfo = document.getElementById('file-info-' + this.closest('form').querySelector('[name="chat_type"]').value);
+        if (this.files.length > 0) {
+            fileInfo.textContent = 'Выбрано файлов: ' + this.files.length;
+        } else {
+            fileInfo.textContent = '';
+        }
+    });
+});
+
+// Автоматическая прокрутка чата вниз при загрузке
+document.querySelectorAll('.message-list').forEach(list => {
+    list.scrollTop = list.scrollHeight;
+});
+</script>
+<style>
+    /* Стили для вкладок */
+    .nav-tabs {
+        border-bottom: 2px solid #dee2e6;
+    }
+    .nav-tabs .nav-link {
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #6c757d;
+        font-weight: 500;
+        padding: 0.75rem 1.25rem;
+        transition: all 0.3s;
+    }
+    .nav-tabs .nav-link:hover {
+        border-color: #adb5bd;
+        color: #495057;
+    }
+    .nav-tabs .nav-link.active {
+        color: #0d6efd;
+        background-color: white;
+        border-bottom-color: #0d6efd;
+        font-weight: 600;
+    }
+    
+    /* Стили для сообщений */
+    .message {
+        max-width: 80%;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+    }
+    .message.sent {
+        background-color: #e3f2fd;
+        margin-left: auto;
+    }
+    .message.received {
+        background-color: #f5f5f5;
+        margin-right: auto;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация вкладок Bootstrap
+    var tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
+    tabElms.forEach(function(tabEl) {
+        tabEl.addEventListener('click', function(event) {
+            // Обновляем URL при переключении вкладок
+            const chatType = event.target.getAttribute('id').replace('-tab', '');
+            window.history.pushState(null, null, '?chat=' + chatType);
+        });
+    });
+    
+    // Активируем начальную вкладку
+    const activeTab = document.getElementById('{{ active_chat }}-tab');
+    if (activeTab) {
+        new bootstrap.Tab(activeTab).show();
+    }
+});
+</script>
+{% endblock %}

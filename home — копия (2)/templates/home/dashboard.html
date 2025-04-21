@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="dashboard-header mb-5 text-center">
+    <h1 class="text-primary mb-3">👋 Добро пожаловать, {{ user.username }}!</h1>
+    <p class="lead text-muted">Здесь вы можете управлять своими данными и настройками</p>
+  </div>
+
+  <div class="row">
+    <!-- Основная информация -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm border-primary">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><i class="fas fa-user-circle me-2"></i>Личные данные</h4>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Имя:</dt>
+            <dd class="col-sm-8">{{ user.first_name|default:"Не указано" }}</dd>
+
+            <dt class="col-sm-4">Фамилия:</dt>
+            <dd class="col-sm-8">{{ user.last_name|default:"Не указана" }}</dd>
+
+            <dt class="col-sm-4">Отчество:</dt>
+            <dd class="col-sm-8">{{ user.profile.middle_name|default:"Не указано" }}</dd>
+
+            <dt class="col-sm-4">Телефон:</dt>
+            <dd class="col-sm-8">{{ user.profile.phone|default:"Не указан" }}</dd>
+
+            <dt class="col-sm-4">Email:</dt>
+            <dd class="col-sm-8">{{ user.email }}</dd>
+          </dl>
+          <div class="mt-4">
+            <a href="{% url 'edit_profile' %}" class="btn btn-outline-primary">
+              <i class="fas fa-edit me-2"></i>Редактировать профиль
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Настройки безопасности -->
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm border-primary">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Безопасность</h4>
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            <a href="{% url 'change_password' %}" 
+               class="list-group-item list-group-item-action d-flex align-items-center">
+              <i class="fas fa-lock me-3 text-primary"></i>
+              <div>
+                <h5 class="mb-1">Сменить пароль</h5>
+                <p class="mb-0 text-muted">Обновите ваш пароль для защиты аккаунта</p>
+              </div>
+            </a>
+
+            <a href="{% url 'change_email' %}" 
+               class="list-group-item list-group-item-action d-flex align-items-center">
+              <i class="fas fa-envelope me-3 text-primary"></i>
+              <div>
+                <h5 class="mb-1">Сменить Email</h5>
+                <p class="mb-0 text-muted">Измените привязанную электронную почту</p>
+              </div>
+            </a>
+
+            <a href="{% url 'change_username' %}" 
+               class="list-group-item list-group-item-action d-flex align-items-center">
+              <i class="fas fa-user-edit me-3 text-primary"></i>
+              <div>
+                <h5 class="mb-1">Сменить логин</h5>
+                <p class="mb-0 text-muted">Измените имя пользователя</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card {
+    border-radius: 15px;
+    transition: transform 0.2s;
+  }
+  
+  .card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .list-group-item {
+    border: none;
+    border-radius: 10px!important;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+  }
+  
+  .list-group-item:hover {
+    background: #f8f9fa;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .card-header {
+    border-radius: 15px 15px 0 0!important;
+    background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+  }
+</style>
+{% endblock %}

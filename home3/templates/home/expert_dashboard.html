@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Экспертиза заявок</h1>
+<ul>
+    {% for application in applications %}
+        <li>
+            <a href="{{ application.get_absolute_url }}">{{ application.title }}</a>
+            - Тип: {{ application.get_innovation_type_display }}
+            - Статус: {{ application.get_status_display }}
+            - Автор: {{ application.author.username }}
+            - Дата создания: {{ application.created_at|date:"d.m.Y" }}
+            - <a href="{% url 'review_application' application.id %}">Оценить (ID: {{ application.id }})</a>
+    {% endfor %}
+</ul>
+{% endblock %}

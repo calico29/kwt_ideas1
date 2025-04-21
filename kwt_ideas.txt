@@ -1,0 +1,2632 @@
+forms py
+
+
+from django import forms
+from .models import Application, Attachment, ChatMessage
+from django.contrib.auth.models import User
+from django.contrib.auth.models import Group
+from .models import ChatMessage
+from allauth.account.forms import SignupForm
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.views import LoginView  # Добавьте эту строку
+from django.contrib.auth.models import User
+from .models import Profile
+from django.contrib.auth.forms import PasswordChangeForm
+class PasswordChangeWithCodeForm(PasswordChangeForm):
+    confirmation_code = forms.CharField(label="Код подтверждения", required=True)
+class UsernameChangeForm(forms.Form):
+    new_username = forms.CharField(label="Новый юзернейм", max_length=150, required=True)
+    confirmation_code = forms.CharField(label="Код подтверждения", required=True)
+
+class EmailChangeForm(forms.Form):
+    new_email = forms.EmailField(label="Новый Email", required=True)
+    current_password = forms.CharField(label="Текущий пароль", widget=forms.PasswordInput, required=True)
+
+
+class ProfileEditForm(forms.Form):
+    first_name = forms.CharField(label="Имя", max_length=150, required=True)
+    last_name = forms.CharField(label="Фамилия", max_length=150, required=True)
+    middle_name = forms.CharField(label="Отчество", max_length=150, required=False)
+    phone = forms.RegexField(
+        label="Номер телефона",
+        regex=r'^(?:\+7|8)\d{10}$',
+        error_messages={'invalid': "Введите корректный российский номер телефона (например, +7XXXXXXXXXX или 8XXXXXXXXXX)"},
+        required=True
+    )
+    username = forms.CharField(label="Юзернейм", max_length=150, required=True)
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user')
+        super().__init__(*args, **kwargs)
+        # Заполняем поля данными из модели User
+        self.fields['first_name'].initial = self.user.first_name
+        self.fields['last_name'].initial = self.user.last_name
+        self.fields['username'].initial = self.user.username
+        # Из профиля
+        if hasattr(self.user, 'profile'):
+            self.fields['middle_name'].initial = self.user.profile.middle_name
+            self.fields['phone'].initial = self.user.profile.phone
+
+    def save(self):
+        # Сохраняем данные в User
+        self.user.first_name = self.cleaned_data['first_name']
+        self.user.last_name = self.cleaned_data['last_name']
+        self.user.username = self.cleaned_data['username']
+        self.user.save()
+        # Сохраняем данные в Profile
+        profile = self.user.profile
+        profile.middle_name = self.cleaned_data['middle_name']
+        profile.phone = self.cleaned_data['phone']
+        profile.save()
+
+class ProfileForm(forms.ModelForm):
+    first_name = forms.CharField(label="Имя", required=True)
+    last_name = forms.CharField(label="Фамилия", required=True)
+    middle_name = forms.CharField(label="Отчество", required=False)
+    phone = forms.CharField(label="Номер телефона", required=True)
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name']
+
+    def __init__(self, *args, **kwargs):
+        # Передаём объект пользователя, чтобы получить данные профиля
+        self.user = kwargs.pop('user')
+        super().__init__(*args, **kwargs)
+        # Если у пользователя уже есть профиль, подставляем начальные данные
+        if hasattr(self.user, 'profile'):
+            self.fields['middle_name'].initial = self.user.profile.middle_name
+            self.fields['phone'].initial = self.user.profile.phone
+
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True  # Разрешаем выбор нескольких файлов
+from allauth.account.forms import LoginForm
+from allauth.account.models import EmailAddress
+from django import forms
+from .models import Application
+
+class ApplicationForm(forms.ModelForm):
+    educational_files = forms.FileField(
+        widget=MultipleFileInput(attrs={'class': 'file-input'}),
+        required=False,
+        label="Материалы ЭУМК",
+        help_text="Выберите файлы (Ctrl + клик для множественного выбора)"
+    )
+    scientific_files = forms.FileField(
+        widget=MultipleFileInput(attrs={'class': 'file-input'}),
+        required=False,
+        label="Научные материалы",
+        help_text="PDF, DOCX, изображения (макс. 20 МБ)"
+    )
+
+    proposal_files = forms.FileField(
+        widget=MultipleFileInput(attrs={'class': 'file-input'}),
+        required=False,
+        label="Документы предложения",
+        help_text="Поддерживаемые форматы: ZIP, XLSX, PPT"
+    )
+    class Meta:
+        model = Application
+        fields = [
+            "title", "phone", "description", "innovation_type",
+            "authors", "product_type", "usage_type", "resource_link",
+            "scientific_product_type", "patents_links", "readiness_level", "department", 
+            "process_innovation_type", "implementation_steps", "process_files",
+            "problem_description", "solution", "expected_effects", 
+        ]
+        
+        widgets = {
+            # Общие поля
+            'title': forms.TextInput(attrs={'placeholder': 'Введите краткое название инновации.'}),
+            'phone': forms.TextInput(attrs={'placeholder': 'Введите контактный телефон.'}),
+            'description': forms.Textarea(attrs={'placeholder': 'Опишите инновацию.'}),
+            'innovation_type': forms.Select(choices=[
+                ('educational', 'Образовательная инновация'),
+                ('scientific', 'Научно-техническая инновация'),
+                ('process', 'Процессная инновация'),
+                ('proposal', 'Инновационное предложение'),
+            ]),
+
+            # Поля для образовательной инновации
+            'product_type': forms.Select(choices=[
+                ('МООК', 'Массовый открытый онлайн-курс (МООК)'),
+                ('ЭУМК', 'Электронный учебно-методический комплекс (ЭУМК)'),
+                ('ЭУМК_иностранный', 'ЭУМК на иностранном языке'),
+                ('СПОК', 'Электронный персонифицированный онлайн-курс (СПОК)'),
+                ('ЭОР', 'Электронный образовательный ресурс'),
+            ]),
+            'usage_type': forms.Select(choices=[
+                ('основная', 'Основная образовательная программа'),
+                ('дополнительная', 'Программа дополнительного профессионального образования'),
+            ]),
+            'resource_link': forms.URLInput(attrs={'placeholder': 'Введите ссылку на ресурс (обязательно для ЭОР).'}),
+             'educational_files': MultipleFileInput(),
+
+
+            # Поля для научно-технической инновации
+            'scientific_product_type': forms.Select(choices=[
+                ('product_1', 'Продукт 1: инновации в результатах ОКР'),
+                ('product_2', 'Продукт 2: инновация в оказании технологических услуг'),
+                ('product_3', 'Продукт 3: инновация в оказании инжиниринговых услуг'),
+            ]),
+            'patents_links': forms.Textarea(attrs={'placeholder': 'Укажите ссылки на патенты, статьи или доклады.'}),
+            'readiness_level': forms.Select(choices=[
+                ('1', '1'),
+                ('2', '2'),
+                ('3', '3'),
+                ('4', '4'),
+                ('5', '5'),
+                ('6', '6'),
+                ('7', '7'),
+                ('8', '8'),
+                ('9', '9'),
+            ]),
+            'department': forms.TextInput(attrs={'placeholder': 'Укажите кафедру/лабораторию.'}),
+            'scientific_files': MultipleFileInput(),
+
+
+            # Поля для процессной инновации
+            'process_innovation_type': forms.Select(choices=[
+                ('организационная', 'Организационная инновация'),
+                ('технологическая', 'Технологическая инновация'),
+                ('управленческая', 'Управленческая инновация'),
+                ('другой', 'Другой тип инновации'),
+            ]),
+            'implementation_steps': forms.Textarea(attrs={'placeholder': 'Опишите порядок внедрения – последовательность действий, основные задачи и этапы разработки и внедрения.'}),
+            'process_files': forms.FileInput(attrs={'placeholder': 'Прикрепите заключение о внедрении инновации.'}),
+
+            # Поля для инновационного предложения
+            'problem_description': forms.Textarea(attrs={'placeholder': 'Опишите проблему и текущее состояние.'}),
+            'solution': forms.Textarea(attrs={'placeholder': 'Опишите предлагаемое решение.'}),
+            'expected_effects': forms.Textarea(attrs={'placeholder': 'Опишите ожидаемые эффекты.'}),
+            'proposal_files': MultipleFileInput(),
+
+        }
+        help_texts = {
+            # Общие подсказки
+            "title": "Введите краткое название инновации.",
+            "phone": "Обязательно укажите контактный телефон.",
+            "description": "Опишите инновацию.",
+            "innovation_type": "Выберите тип инновации.",
+
+            # Подсказки для образовательной инновации
+            "authors": "Перечислите всех авторов (ФИО, должность).",
+            "product_type": "Выберите тип продукта.",
+            "usage_type": "Выберите, для чего разработана инновация.",
+            "resource_link": "Ссылка на ресурс обязательна для ЭОР, размещенных в Лекториуме СФМЭИ.",
+            "educational_files": "Вложения обязательны для ЭУМК (во вложения прикладываются все материалы ЭУМК).",
+
+            # Подсказки для научно-технической инновации
+            "scientific_product_type": "Выберите тип продукта.",
+            "patents_links": "Укажите ссылки на патенты, статьи или доклады.",
+            "readiness_level": "Уровень готовности должен быть не менее 4 по ГОСТ Р 58048-2017.",
+            "department": "Укажите кафедру/лабораторию.",
+            "scientific_files": "Прикрепите акты выполненных работ или лицензионные договоры.",
+
+            # Подсказки для процессной инновации
+            "process_innovation_type": "Выберите тип инновации.",
+            "implementation_steps": "Опишите порядок внедрения – последовательность действий, основные задачи и этапы разработки и внедрения.",
+            "process_files": "Прикрепите заключение о внедрении инновации.",
+
+            # Подсказки для инновационного предложения
+            "problem_description": "Опишите проблему и текущее состояние.",
+            "solution": "Опишите предлагаемое решение.",
+            "expected_effects": "Опишите ожидаемые эффекты.",
+            "proposal_files": "Прикрепите дополнительные документы, если необходимо.",
+        }
+
+class CustomAuthForm(AuthenticationForm):
+    username = forms.EmailField(label="Email")  # Используйте email вместо username
+
+class CustomLoginForm(LoginForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['login'].label = "Логин или Email"
+        self.fields['password'].label = "Пароль"
+
+class CustomLoginView(LoginView):
+    form_class = CustomAuthForm  # Укажите кастомную форму
+    template_name = 'login.html'   
+
+
+class ProposalReviewForm(forms.Form):
+    additional_questions = forms.CharField(widget=forms.Textarea, label="Дополнительные вопросы к автору", required=False)
+    relevance = forms.ChoiceField(choices=[(i, str(i)) for i in range(6)], label="Актуальность для СФ МЭИ")
+    cost_effectiveness = forms.ChoiceField(choices=[(i, str(i)) for i in range(6)], label="Отношение полезного эффекта к затратам")
+    solution_quality = forms.ChoiceField(choices=[(i, str(i)) for i in range(6)], label="Уровень проработки описания решения")
+    comments = forms.CharField(widget=forms.Textarea, label="Обоснование оценки", required=False)
+    decision = forms.ChoiceField(choices=[('approved', 'Принять'), ('rejected', 'Отклонить')], label="Решение")
+
+    def calculate_total(self):
+        fields = ['relevance', 'cost_effectiveness', 'solution_quality']
+        total = sum(int(self.cleaned_data[field]) for field in fields)
+        return total
+
+class ChatMessageForm(forms.ModelForm):
+    class Meta:
+        model = ChatMessage
+        fields = ['chat_type', 'message']
+        widgets = {
+            'chat_type': forms.HiddenInput(),
+            'message': forms.Textarea(attrs={
+                'rows': 3,
+                'placeholder': 'Введите ваше сообщение...',
+                'class': 'form-control'
+            })
+        }   
+class ProcessInnovationReviewForm(forms.Form):
+    additional_questions = forms.CharField(widget=forms.Textarea, label="Дополнительные вопросы к автору", required=False)
+    novelty_level = forms.ChoiceField(choices=[(0, '0'), (1, '1'), (2, '2')], label="Уровень новизны")
+    scalability = forms.ChoiceField(choices=[(1, '1'), (2, '2'), (3, '3')], label="Масштабы возможного внедрения")
+    implementation_scale = forms.ChoiceField(choices=[(0, '0'), (1, '1'), (2, '2'), (3, '3')], label="Масштаб фактического внедрения")
+    effect_on_indicators = forms.ChoiceField(choices=[(0, '0'), (1, '1'), (2, '2')], label="Оценка эффекта на показатели ПКР")
+    comments = forms.CharField(widget=forms.Textarea, label="Обоснование оценки", required=False)
+
+    def calculate_total(self):
+        fields = ['novelty_level', 'scalability', 'implementation_scale', 'effect_on_indicators']
+        total = sum(int(self.cleaned_data[field]) for field in fields)
+        return total
+class ScientificInnovationReviewForm(forms.Form):
+    additional_questions = forms.CharField(widget=forms.Textarea, label="Дополнительные вопросы к автору", required=False)
+    scalability = forms.ChoiceField(choices=[(0, '0'), (1, '1'), (2, '2'), (3, '3')], label="Масштабы возможного внедрения")
+    financial_effect = forms.ChoiceField(choices=[(0, '0'), (1, '1'), (2, '2'), (3, '3'), (4, '4'), (5, '5')], label="Оценка финансового эффекта")
+    comparison_with_analogues = forms.ChoiceField(choices=[(0, '0'), (1, '1'), (2, '2')], label="Сравнение с аналогами")
+    comments = forms.CharField(widget=forms.Textarea, label="Обоснование оценки", required=False)
+
+    def calculate_total(self):
+        fields = ['scalability', 'financial_effect', 'comparison_with_analogues']
+        total = sum(int(self.cleaned_data[field]) for field in fields)
+        return total       
+class AttachmentForm(forms.ModelForm):
+    class Meta:
+        model = Attachment
+        fields = ["file"]
+
+class RegisterForm(SignupForm):
+    username = forms.CharField(max_length=30, required=True, label="Логин")
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].label = "Email"
+        self.fields['password1'].label = "Пароль"
+        self.fields['password2'].label = "Подтверждение пароля"
+
+    def save(self, request):
+        user = super().save(request)
+        user.is_active = False  # User remains inactive until email confirmation
+        user.save()
+        
+        # Create email address record
+        EmailAddress.objects.add_email(
+            request,
+            user,
+            user.email,
+            signup=True,
+            confirm=True
+        )
+        
+        # Add to group
+        group = Group.objects.get(name='Авторы')
+        user.groups.add(group)
+        
+        return user
+
+    def signup(self, request, user):
+        pass  # Логика уже в save
+
+
+
+
+
+
+
+
+models py
+
+
+from django.db import models
+from wagtail.fields import RichTextField
+from wagtail.models import Page
+from django.db import models
+from wagtail.models import Page
+from wagtail.admin.panels import FieldPanel
+from django.contrib.auth.models import User
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+from django.core.signing import Signer
+from django.conf import settings
+import uuid
+from django.utils import timezone
+from django.template import Library
+from django.urls import reverse
+register = Library()
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class Profile(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    phone = models.CharField("Номер телефона", max_length=20, blank=True, null=True)
+    middle_name = models.CharField("Отчество", max_length=150, blank=True, null=True)
+
+    def __str__(self):
+        return f"Профиль пользователя {self.user.username}"
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+    else:
+        # Если профиль отсутствует (для старых пользователей) — создаём его
+        if not hasattr(instance, 'profile'):
+            Profile.objects.create(user=instance)
+        else:
+            instance.profile.save()
+    
+class Attachment(models.Model):
+    id = models.BigAutoField(primary_key=True)  # Добавляем явное поле ID
+    file = models.FileField(upload_to="attachments/")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    def is_empty(self):
+        return self.file.size == 0 if self.file else True
+    
+    def get_protected_url(self):
+        if self.is_empty():
+            return None
+        return reverse('protected_file', kwargs={'file_path': f"attachments/{self.file.name.split('/')[-1]}"})
+    
+    def clean(self):
+        if self.is_empty():
+            raise ValidationError("Нельзя сохранять пустой файл")
+
+    def __str__(self):
+        return self.file.name
+
+
+def validate_file_size(value):
+    if value.size == 0:
+        raise ValidationError("Файл не должен быть пустым")
+    if value.size > 20 * 1024 * 1024:  # 20MB
+        raise ValidationError("Максимальный размер файла - 20 МБ")
+
+class EmailConfirmation(models.Model):
+    id = models.BigAutoField(primary_key=True)  # Добавляем явное поле ID
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    email = models.EmailField()
+    token = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        if not self.token:
+            signer = Signer()
+            self.token = signer.sign(self.email)
+        super().save(*args, **kwargs)
+
+    def confirm(self):
+        self.confirmed_at = timezone.now()
+        self.save()
+from django.db import models
+from django.contrib.auth.models import User
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class Application(models.Model):
+    id = models.BigAutoField(primary_key=True) 
+    INNOVATION_TYPE_CHOICES = [
+        ('educational', 'Образовательная'),
+        ('scientific', 'Научно-техническая'),
+        ('process', 'Процессная'),
+        ('proposal', 'Инновационное предложение'),
+    ]
+    STATUS_CHOICES = [
+        ('draft', 'Черновик'),
+        ('submitted', 'Отправлена'),
+        ('under_review', 'На рассмотрении'),
+        ('approved', 'Одобрена'),
+        ('rejected', 'Отклонена'),
+    ]
+    
+    # Убедитесь, что поле status использует STATUS_CHOICES
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='submitted'
+    )
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('view_application', kwargs={'application_id': self.id})
+    # Общие поля для всех типов инноваций
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
+    expert = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_expert")
+    title = models.CharField(max_length=255, verbose_name="Название инновации")
+    phone = models.CharField(max_length=20, verbose_name="Контактный телефон", blank=True, null=True)
+    description = models.TextField(verbose_name="Описание")
+    innovation_type = models.CharField(max_length=50, choices=INNOVATION_TYPE_CHOICES, verbose_name="Тип заявки")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Образовательная инновация
+    authors = models.TextField(blank=True, null=True, verbose_name="Авторы инновации")
+    product_type = models.CharField(max_length=255, blank=True, null=True, verbose_name="Тип продукта", choices=[
+        ('МООК', 'Массовый открытый онлайн-курс (МООК)'),
+        ('ЭУМК', 'Электронный учебно-методический комплекс (ЭУМК)'),
+        ('ЭУМК_иностранный', 'ЭУМК на иностранном языке'),
+        ('СПОК', 'Электронный персонифицированный онлайн-курс (СПОК)'),
+        ('ЭОР', 'Электронный образовательный ресурс'),
+    ])
+    usage_type = models.CharField(max_length=255, blank=True, null=True, verbose_name="Инновация разработана для")
+    resource_link = models.URLField(blank=True, null=True, verbose_name="Ссылка на ресурс")
+    educational_files = models.ManyToManyField(Attachment, blank=True, verbose_name="Материалы ЭУМК")
+
+    # Научно-техническая инновация
+    scientific_product_type = models.CharField(max_length=255, blank=True, null=True, verbose_name="Тип продукта", choices=[
+        ('product_1', 'Продукт 1: инновации в результатах ОКР'),
+        ('product_2', 'Продукт 2: инновация в оказании технологических услуг'),
+        ('product_3', 'Продукт 3: инновация в оказании инжиниринговых услуг'),
+    ])
+    patents_links = models.TextField(blank=True, null=True, verbose_name="Ссылки на патенты и статьи")
+    readiness_level = models.CharField(max_length=255, blank=True, null=True, verbose_name="Уровень готовности")
+    department = models.CharField(max_length=255, blank=True, null=True, verbose_name="Кафедра/лаборатория")
+    scientific_files = models.ManyToManyField(
+        Attachment, 
+        blank=True,
+        related_name='scientific_attachments',
+        verbose_name="Научные материалы"
+    )
+
+    # Процессная инновация
+    process_innovation_type = models.CharField(max_length=255, blank=True, null=True, verbose_name="Тип инновации", choices=[
+        ('организационная', 'Организационная инновация'),
+        ('технологическая', 'Технологическая инновация'),
+        ('управленческая', 'Управленческая инновация'),
+        ('другой', 'Другой тип инновации'),
+    ])
+    implementation_steps = models.TextField(blank=True, null=True, verbose_name="Описание процесса внедрения")
+    process_files = models.FileField(upload_to='process_files/', blank=True, null=True, verbose_name="Заключение о внедрении")
+    # Инновационное предложение
+    problem_description = models.TextField(blank=True, null=True, verbose_name="Описание проблемы")
+    solution = models.TextField(blank=True, null=True, verbose_name="Предлагаемое решение")
+    expected_effects = models.TextField(blank=True, null=True, verbose_name="Ожидаемые эффекты")
+    proposal_files = models.ManyToManyField(
+        Attachment, 
+        blank=True,
+        related_name='proposal_attachments',
+        verbose_name="Дополнительный документы"
+    )
+
+    additional_questions = models.TextField(blank=True, null=True, verbose_name="Дополнительные вопросы к автору")
+    relevance = models.IntegerField(blank=True, null=True, verbose_name="Актуальность для СФ МЭИ")
+    cost_effectiveness = models.IntegerField(blank=True, null=True, verbose_name="Отношение полезного эффекта к затратам")
+    solution_quality = models.IntegerField(blank=True, null=True, verbose_name="Уровень проработки описания решения")
+    novelty_level = models.IntegerField(blank=True, null=True, verbose_name="Уровень новизны")
+    scalability = models.IntegerField(blank=True, null=True, verbose_name="Масштабы возможного внедрения")
+    implementation_scale = models.IntegerField(blank=True, null=True, verbose_name="Масштаб фактического внедрения")
+    effect_on_indicators = models.IntegerField(blank=True, null=True, verbose_name="Оценка эффекта на показатели ПКР")
+    financial_effect = models.IntegerField(blank=True, null=True, verbose_name="Оценка финансового эффекта")
+    comparison_with_analogues = models.IntegerField(blank=True, null=True, verbose_name="Сравнение с аналогами")
+    comments = models.TextField(blank=True, null=True, verbose_name="Обоснование оценки")
+    decision = models.CharField(max_length=20, choices=[
+        ('approved', 'Принять'),
+        ('rejected', 'Отклонить')
+    ], blank=True, null=True, verbose_name="Решение")
+    total_score = models.IntegerField(blank=True, null=True, verbose_name="Итоговая оценка")
+    def get_innovation_type_display(self):
+        return dict(self.INNOVATION_TYPE_CHOICES).get(self.innovation_type, self.innovation_type)
+    
+    def get_status_display(self):
+        return dict(self.STATUS_CHOICES).get(self.status, self.status)
+    
+    def get_product_type_display(self):
+        return dict([
+            ('МООК', 'Массовый открытый онлайн-курс (МООК)'),
+            ('ЭУМК', 'Электронный учебно-методический комплекс (ЭУМК)'),
+            ('ЭУМК_иностранный', 'ЭУМК на иностранном языке'),
+            ('СПОК', 'Электронный персонифицированный онлайн-курс (СПОК)'),
+            ('ЭОР', 'Электронный образовательный ресурс'),
+        ]).get(self.product_type, self.product_type)
+    
+    def get_scientific_product_type_display(self):
+        return dict([
+            ('product_1', 'Продукт 1: инновации в результатах ОКР'),
+            ('product_2', 'Продукт 2: инновация в оказании технологических услуг'),
+            ('product_3', 'Продукт 3: инновация в оказании инжиниринговых услуг'),
+        ]).get(self.scientific_product_type, self.scientific_product_type)
+    
+    def get_process_innovation_type_display(self):
+        return dict([
+            ('организационная', 'Организационная инновация'),
+            ('технологическая', 'Технологическая инновация'),
+            ('управленческая', 'Управленческая инновация'),
+            ('другой', 'Другой тип инновации'),
+        ]).get(self.process_innovation_type, self.process_innovation_type)
+    def get_unread_count(self, user):
+        return self.chat_messages.filter(
+            read=False
+        ).exclude(
+            sender=user
+        ).count()
+    def get_unread_count_for_chat(self, user, chat_type):
+        return self.chat_messages.filter(
+            chat_type=chat_type,
+            read=False
+        ).exclude(
+            sender=user
+        ).count()
+    @register.filter
+    def get_item(dictionary, key):
+        return dictionary.get(key, 0)
+
+    def get_chat_messages_by_type(self, chat_type):
+        """Возвращает сообщения чата определенного типа, отсортированные по времени"""
+        return self.chat_messages.filter(chat_type=chat_type).order_by('timestamp')
+    def get_unread_count_for_chat(self, user, chat_type):
+        return self.chat_messages.filter(
+            chat_type=chat_type,
+            read=False
+        ).exclude(
+            sender=user  # Исключаем сообщения, которые отправил сам пользователь
+        ).count()
+    @property
+    def unread_counts(self):
+        return {
+            'author_expert': self.get_unread_count_for_chat(self.author, 'author_expert'),
+            'author_responsible': self.get_unread_count_for_chat(self.author, 'author_responsible'),
+            'expert_responsible': self.get_unread_count_for_chat(self.expert, 'expert_responsible')
+        }
+    def get_decision_display(self):
+        return dict([
+            ('approved', 'Принять'),
+            ('rejected', 'Отклонить')
+        ]).get(self.decision, self.decision)
+    def __str__(self):
+        return self.title
+
+class ChatMessage(models.Model):
+    id = models.BigAutoField(primary_key=True)  # Добавляем явное поле ID
+    APPLICATION_CHAT_TYPES = [
+        ('author_expert', 'Чат автора с экспертом'),
+        ('author_responsible', 'Чат автора с ответственным'),
+        ('expert_responsible', 'Чат эксперта с ответственным'),
+    ]
+    def is_unread(self, user):
+        """Проверяет, является ли сообщение непрочитанным для указанного пользователя"""
+        return not self.read and self.sender != user
+    application = models.ForeignKey('Application', on_delete=models.CASCADE, related_name='chat_messages')
+    chat_type = models.CharField(max_length=20, choices=APPLICATION_CHAT_TYPES)
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    message = models.TextField()
+    timestamp = models.DateTimeField(default=timezone.now)
+    read = models.BooleanField(default=False)
+    attachments = models.ManyToManyField('Attachment', blank=True)
+    
+    def save(self, *args, **kwargs):
+        # Автоматическое преобразование ссылок в HTML
+        if self.message:
+            self.message = linkify_text(self.message)
+        super().save(*args, **kwargs)
+
+def linkify_text(text):
+    import re
+    url_pattern = re.compile(r'(https?://\S+)')
+    return url_pattern.sub(r'<a href="\1" target="_blank">\1</a>', text)
+    class Meta:
+        ordering = ['timestamp']
+        verbose_name = 'Сообщение чата'
+        verbose_name_plural = 'Сообщения чатов'
+
+    def __str__(self):
+        return f"{self.get_chat_type_display()} - {self.sender}: {self.message[:50]}"
+
+class HomePage(Page):
+    intro = RichTextField(blank=True)
+
+    content_panels = Page.content_panels + [
+        FieldPanel('intro'),
+    ]
+    template = "home/home_page.html"
+    
+class ApplicationPage(Page):
+    subpage_types = []  # Запрещаем вложенные страницы
+    description = RichTextField(blank=True)
+
+    content_panels = Page.content_panels + [
+        FieldPanel('description'),
+    ]
+    template = "home/application_page.html"
+class ModerationPage(Page):
+    subpage_types = []
+    instructions = RichTextField(blank=True)
+
+    content_panels = Page.content_panels + [
+        FieldPanel('instructions'),
+    ]
+    template = "home/moderation.html"
+
+
+class DashboardPage(Page):
+    subpage_types = []  # Запрещаем вложенные страницы
+    intro = RichTextField(blank=True)
+
+    content_panels = Page.content_panels + [
+        FieldPanel('intro'),
+    ]
+    template = "home/dashboard.html"
+
+class ExpertDashboardPage(Page):
+    subpage_types = []  # Запрещаем вложенные страницы
+    intro = RichTextField(blank=True)
+
+    content_panels = Page.content_panels + [
+        FieldPanel('intro'),
+    ]
+    template = "home/expert_dashboard.html"
+
+
+
+
+
+
+
+irls py
+
+
+from django.contrib import admin
+from django.urls import path, include
+from .views import submit_application, dashboard_view, view_application
+from .views import application_page
+from .views import register
+from django.contrib.auth import views as auth_views
+from .views import CustomLogoutView
+from .views import logout_view
+from .views import manage_users
+from home.views import all_applications_view
+from .views import manage_users
+from .views import manage_users, edit_user, delete_user
+from .views import expert_dashboard
+from .views import moderation_page
+from .views import assign_expert, review_application
+from django.urls import include, path
+from django.urls import path
+from . import views
+from django.urls import re_path
+from . import consumers
+from django.conf import settings
+from django.conf.urls.static import static
+from django.views.static import serve 
+from .views import CustomLoginView
+from .views import activate
+from .views import redirect_email_confirmation
+from allauth.account.views import ConfirmEmailView
+from django_otp.views import LoginView as OTPLoginView
+
+
+urlpatterns = [
+    #path('', views.home_page, name='home'),  # Добавьте этот маршрут первым
+    path('google-login/', views.google_login, name='google_login'),
+    path('oauth2callback/', views.oauth2callback, name='oauth2callback'),
+    path("applicationpage/", application_page, name="application_page"),
+    path("dashboard/", dashboard_view, name="dashboard"),
+    path("application/<int:application_id>/", view_application, name="view_application"),
+    path("register/", register, name="register"),  # ✅ Страница регистрации
+    path('account/2fa/authenticate/', views.two_factor_authenticate, name='two-factor-authenticate'),
+    path("login/", CustomLoginView.as_view(), name="login"),
+    path("logout/", logout_view, name="logout"),
+    path("manage-users/", manage_users, name="manage_users"),
+    path('applications/', all_applications_view, name='all_applications'),
+    path("manage-users/edit/<int:user_id>/", edit_user, name="edit_user"),
+    path("manage-users/delete/<int:user_id>/", delete_user, name="delete_user"),
+    path("dashboard/", dashboard_view, name="my_applications"),
+    path("moderation/", moderation_page, name="moderation"),
+    path("expert/", expert_dashboard, name="expert_dashboard"),
+    path("assign-expert/<int:application_id>/", assign_expert, name="assign_expert"),
+    path("review/<int:application_id>/", review_application, name="review_application"),
+  
+    path('activate/<str:uidb64>/<str:token>/', views.activate, name='activate'),
+    path('application/<int:application_id>/send_message/', views.send_message, name='send_message'),
+    path('debug/file/<path:file_path>', views.debug_file_view, name='debug_file'),
+    path('protected/media/<path:file_path>', views.protected_file, name='protected_file'),
+    path('accounts/login/', OTPLoginView.as_view(), name='account_login'),
+    path("profile/edit/", views.edit_profile, name="edit_profile"),
+    path("profile/change-email/", views.request_email_change, name="change_email"),
+    path("profile/change-password/", views.change_password, name="change_password"),
+    path("profile/change-username/", views.change_username, name="change_username"),
+    
+    path('accounts/', include('allauth.urls')),
+    
+
+    
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+if settings.DEBUG:
+    urlpatterns += [
+        path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
+    ]
+websocket_urlpatterns = [
+    re_path(r'ws/chat/(?P<application_id>\d+)/$', consumers.ChatConsumer.as_asgi()),
+]
+
+
+
+
+
+
+
+views py
+
+
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth.tokens import default_token_generator
+from allauth.account.models import EmailAddress
+from django.contrib.auth import login as auth_login
+from django.contrib.auth import login as auth_login  # Используйте псевдони
+from django.shortcuts import redirect
+from django.contrib.auth.models import User
+from .models import Application
+from django.shortcuts import render, redirect
+from .forms import ApplicationForm
+from .models import Application
+import logging
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.views import LoginView
+from django.contrib.auth import login
+from pathlib import Path
+from django.http import Http404, FileResponse, HttpResponse
+from django.core.exceptions import PermissionDenied
+from django.shortcuts import render, redirect
+from .forms import ApplicationForm
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.contrib.auth import login
+from django.shortcuts import render, redirect
+from .forms import RegisterForm
+from django.contrib.auth.models import Group
+from django.contrib.auth.views import LogoutView
+from django.urls import reverse_lazy
+from django.contrib.auth import logout
+from django.shortcuts import redirect
+from django.shortcuts import render, redirect
+from .models import Application, Attachment
+from .forms import ApplicationForm
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render, redirect
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, redirect
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.shortcuts import render, get_object_or_404, redirect
+from django.shortcuts import render, redirect
+from django.http import Http404, FileResponse
+from django.core.exceptions import PermissionDenied
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from .forms import ProcessInnovationReviewForm, ScientificInnovationReviewForm
+import logging
+logger = logging.getLogger("auth")
+
+from google_auth_oauthlib.flow import Flow
+from google.auth.transport.requests import Request
+import os
+from django.shortcuts import redirect, render
+from django.conf import settings
+from google.oauth2.credentials import Credentials
+from django.core.mail import send_mail
+from django.contrib.sites.shortcuts import get_current_site
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.shortcuts import redirect
+from .forms import (  # <-- Добавьте этот импорт
+    ApplicationForm,
+    ProposalReviewForm,
+    ProcessInnovationReviewForm,
+    ScientificInnovationReviewForm
+)
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .models import Application, ChatMessage
+from .forms import ChatMessageForm
+from django.contrib.auth import login as auth_login
+from django.shortcuts import redirect
+from allauth.account.models import EmailConfirmation, EmailConfirmationHMAC
+from django_otp.plugins.otp_email.models import EmailDevice
+from django_otp.middleware import OTPMiddleware
+from django_otp import user_has_device
+from django_otp.decorators import otp_required
+from django_otp.plugins.otp_email.models import EmailDevice
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django_otp.plugins.otp_email.models import EmailDevice
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .middleware import TwoFactorAuthMiddleware  # Добавьте эту строку
+from django.contrib.auth import get_user_model
+from django_otp.plugins.otp_email.models import EmailDevice
+from django.template.loader import render_to_string 
+from django.core.mail import EmailMessage
+from django.core.cache import cache
+from django.utils import timezone
+from datetime import timedelta
+User = get_user_model()
+from .forms import ProfileForm
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.conf import settings
+from .forms import ProfileEditForm
+from .forms import EmailChangeForm
+from .forms import PasswordChangeWithCodeForm
+from django.contrib.auth import update_session_auth_hash
+from .forms import UsernameChangeForm
+
+@login_required
+def change_username(request):
+    if request.method == "POST" and "send_code" in request.POST:
+        new_username = request.POST.get("new_username")
+        code = str(random.randint(100000, 999999))
+        request.session["username_change_code"] = code
+        request.session["pending_new_username"] = new_username
+        send_mail(
+            "Код подтверждения смены юзернейма",
+            f"Ваш код подтверждения: {code}",
+            settings.DEFAULT_FROM_EMAIL,
+            [request.user.email],
+        )
+        return redirect("change_username")
+    else:
+        form = UsernameChangeForm(request.POST or None)
+        if request.method == "POST" and "confirm_change" in request.POST:
+            if form.is_valid():
+                code = form.cleaned_data["confirmation_code"]
+                if code == request.session.get("username_change_code"):
+                    new_username = request.session.get("pending_new_username")
+                    request.user.username = new_username
+                    request.user.save()
+                    request.session.pop("username_change_code", None)
+                    request.session.pop("pending_new_username", None)
+                    return redirect("profile")
+                else:
+                    form.add_error("confirmation_code", "Неверный код подтверждения")
+        else:
+            form = UsernameChangeForm(initial={"new_username": request.user.username})
+    return render(request, "home/change_username.html", {"form": form})
+
+
+@login_required
+def change_password(request):
+    if request.method == "POST" and "send_code" in request.POST:
+        # Генерируем и отправляем код на текущий email
+        code = str(random.randint(100000, 999999))
+        request.session["password_change_code"] = code
+        send_mail(
+            "Код подтверждения смены пароля",
+            f"Ваш код подтверждения: {code}",
+            settings.DEFAULT_FROM_EMAIL,
+            [request.user.email],
+        )
+        return redirect("change_password")
+    else:
+        form = PasswordChangeWithCodeForm(user=request.user, data=request.POST or None)
+        if request.method == "POST" and "confirm_change" in request.POST:
+            if form.is_valid():
+                code = form.cleaned_data["confirmation_code"]
+                if code == request.session.get("password_change_code"):
+                    user = form.save()
+                    update_session_auth_hash(request, user)
+                    request.session.pop("password_change_code", None)
+                    return redirect("profile")
+                else:
+                    form.add_error("confirmation_code", "Неверный код подтверждения")
+        else:
+            form = PasswordChangeWithCodeForm(user=request.user)
+    return render(request, "home/change_password.html", {"form": form})
+
+@login_required
+def request_email_change(request):
+    if request.method == "POST" and "send_code" in request.POST:
+        new_email = request.POST.get("new_email")
+        # Генерируем случайный 6-значный код
+        code = str(random.randint(100000, 999999))
+        request.session["email_change_code"] = code
+        request.session["pending_new_email"] = new_email
+        # Отправляем код на текущий email пользователя
+        send_mail(
+            "Код подтверждения смены email",
+            f"Ваш код подтверждения: {code}",
+            settings.DEFAULT_FROM_EMAIL,
+            [request.user.email],
+        )
+        # Перезагружаем страницу, чтобы показать поле ввода кода
+        return redirect("change_email")
+    else:
+        # Если нажали кнопку подтверждения изменения
+        form = EmailChangeForm(request.POST or None)
+        if request.method == "POST" and "confirm_change" in request.POST:
+            if form.is_valid():
+                code = form.cleaned_data["confirmation_code"]
+                if code == request.session.get("email_change_code"):
+                    new_email = request.session.get("pending_new_email")
+                    request.user.email = new_email
+                    request.user.save()
+                    # Очистка сессии
+                    request.session.pop("email_change_code", None)
+                    request.session.pop("pending_new_email", None)
+                    return redirect("profile")
+                else:
+                    form.add_error("confirmation_code", "Неверный код подтверждения")
+        else:
+            form = EmailChangeForm(initial={"new_email": request.user.email})
+    return render(request, "home/change_email.html", {"form": form})
+
+@login_required
+def edit_profile(request):
+    if request.method == "POST":
+        form = ProfileEditForm(request.POST, user=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect("profile")
+    else:
+        form = ProfileEditForm(user=request.user)
+    return render(request, "home/edit_profile.html", {"form": form})
+
+@login_required
+def profile_view(request):
+    return render(request, "home/profile.html", {"user": request.user})
+@login_required
+def request_email_change(request):
+    if request.method == "POST":
+        form = EmailChangeForm(request.POST)
+        if form.is_valid():
+            new_email = form.cleaned_data['new_email']
+            current_password = form.cleaned_data['current_password']
+            if not request.user.check_password(current_password):
+                form.add_error("current_password", "Неверный пароль")
+            else:
+                # Генерируем токен и сохраняем новый email во временной сессии
+                token = default_token_generator.make_token(request.user)
+                request.session["pending_email"] = new_email
+                request.session["email_change_token"] = token
+                # Отправляем письмо для подтверждения изменения
+                confirm_url = f"http://localhost:8000/profile/confirm-email-change/{token}/"
+                send_mail(
+                    "Подтверждение изменения Email",
+                    f"Для подтверждения изменения email перейдите по ссылке: {confirm_url}",
+                    settings.DEFAULT_FROM_EMAIL,
+                    [request.user.email],
+                )
+                # Можно уведомить пользователя, что письмо отправлено
+                return redirect("dashboard")
+    else:
+        form = EmailChangeForm()
+    return render(request, "home/request_email_change.html", {"form": form})
+@login_required
+def confirm_email_change(request, token):
+    pending_email = request.session.get("pending_email")
+    if not pending_email:
+        return redirect("edit_profile")
+    if default_token_generator.check_token(request.user, token):
+        request.user.email = pending_email
+        request.user.save()
+        # Очистка сессии
+        del request.session["pending_email"]
+        del request.session["email_change_token"]
+        return redirect("dashboard")
+    else:
+        return HttpResponse("Ошибка подтверждения", status=400)
+
+@login_required
+def edit_profile(request):
+    if request.method == "POST":
+        form = ProfileForm(request.POST, user=request.user, instance=request.user)
+        if form.is_valid():
+            # Обновляем данные пользователя (имя, фамилия)
+            user = form.save()
+            # Обновляем дополнительные поля профиля
+            profile = user.profile
+            profile.middle_name = form.cleaned_data.get("middle_name")
+            profile.phone = form.cleaned_data.get("phone")
+            profile.save()
+            # Можно добавить уведомление о том, что изменения требуют подтверждения по email
+            # и вызвать функцию отправки письма для подтверждения изменений
+            return redirect("dashboard")
+    else:
+        form = ProfileForm(user=request.user, instance=request.user)
+    return render(request, "home/edit_profile.html", {"form": form})
+
+
+def send_otp_email(user, token):
+    email = EmailMessage(
+        subject="Ваш код подтверждения KWT Ideas",
+        body=f"""Здравствуйте, {user.username}!
+
+Ваш код подтверждения: {token}
+
+Код действителен 10 минут. Никому не сообщайте этот код.
+
+С уважением,
+Команда KWT Ideas""",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[user.email],
+    )
+    email.send()
+@login_required
+def resend_2fa_code(request):
+    device = EmailDevice.objects.get(user=request.user)
+    device.generate_challenge()
+    messages.info(request, "Новый код подтверждения отправлен на ваш email")
+    return redirect('two-factor-authenticate')
+def home_page(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return render(request, 'home/home_page.html')
+def two_factor_authenticate(request):
+    device_hash = TwoFactorAuthMiddleware.get_device_hash(request)
+    
+    if request.method == 'POST':
+        token = request.POST.get('token', '')
+        try:
+            device = EmailDevice.objects.get(user=request.user)
+            if device.verify_token(token):
+                # Сохраняем верификацию с привязкой к хэшу устройства
+                request.session[f'2fa_verified_{device_hash}'] = True
+                request.session.modified = True
+                logger.debug("2FA successfully verified")
+                return redirect('dashboard')
+        except EmailDevice.DoesNotExist:
+            pass
+
+    # Генерация нового токена
+    try:
+        device = EmailDevice.objects.get(user=request.user)
+        device.generate_challenge()
+        logger.debug(f"New 2FA code sent to {request.user.email}")
+    except Exception as e:
+        logger.error(f"Error generating 2FA code: {str(e)}")
+    
+    return render(request, 'home/two_factor_authenticate.html')
+
+from django.contrib.auth import login
+from django.shortcuts import render, redirect
+from django.contrib.auth.forms import AuthenticationForm
+from django_otp import user_has_device
+
+def login_view(request):
+    logger.debug(f"я в логин вью")
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+
+            # Обработка remember_me
+            remember_me = request.POST.get('remember_me') == 'on'
+
+            logger.debug(f"remember_me получено: {request.POST.get('remember_me')} -> {remember_me}")
+            request.session['remember_device'] = remember_me
+            # Отладочный вывод: проверяем, что переменная установилась
+            logger.debug(f"remember_device установлено: {request.session.get('remember_device')}")
+            
+            # Устанавливаем время жизни сессии: 30 дней, если выбрано "Запомнить устройство"
+            request.session.set_expiry(60 * 60 * 24 * 30 if remember_me else 0)
+            request.session.save()
+
+            # Входим пользователя
+            login(request, user)
+
+            # Если у пользователя настроена 2FA, перенаправляем на проверку
+            if user_has_device(user):
+                return redirect('two-factor-authenticate')
+            else:
+                return redirect('dashboard')
+    else:
+        form = AuthenticationForm(request)
+    return render(request, 'login.html', {'form': form})
+
+
+class RememberDeviceMiddleware(OTPMiddleware):
+    def process_request(self, request):
+        if request.user.is_authenticated:
+            # Проверяем, подтверждено ли устройство
+            if not request.session.get('device_verified'):
+                # Если нет, перенаправляем на 2FA
+                return redirect('two-factor-authenticate')
+        return super().process_request(request)
+        
+def setup_email_2fa(user):
+    device, created = EmailDevice.objects.get_or_create(
+        user=user,
+        name='Email',
+        confirmed=True
+    )
+    return device
+def redirect_email_confirmation(request, key):
+    try:
+        confirmation = EmailConfirmation.objects.get(key=key)
+    except EmailConfirmation.DoesNotExist:
+        confirmation = EmailConfirmationHMAC.from_key(key)
+    
+    if confirmation:
+        uid = confirmation.email_address.user.pk
+        token = confirmation.key  # Используем ключ подтверждения как токен (или генерируем свой)
+        return redirect(f'/activate/{uid}/{token}/')
+
+    return redirect('/')  # Если не найдено, редирект на главную
+class CustomLoginView(LoginView):
+    logger.debug(f"CustomLoginView")
+    template_name = 'home/login.html'
+    redirect_authenticated_user = True
+    def dispatch(self, request, *args, **kwargs):
+        logger.debug("CustomLoginView: dispatch called")
+        return super().dispatch(request, *args, **kwargs)
+    def form_invalid(self, form):
+        logger.debug(f"CustomLoginView: form is invalid, errors={form.errors}")
+        return super().form_invalid(form)
+
+    def form_valid(self, form):
+        
+        remember_me = self.request.POST.get('remember_me') == 'on'
+        self.request.session['remember_device'] = remember_me
+        self.request.session.set_expiry(60 * 60 * 24 * 30 if remember_me else 0)
+        self.request.session.save()
+        logger.debug(f"CustomLoginView: remember_me={remember_me}, session remember_device={self.request.session.get('remember_device')}")
+        logger.debug(f"Session Data Before Redirect: {self.request.session.items()}")
+        return super().form_valid(form)
+
+def google_login(request):
+    flow = Flow.from_client_config(
+        {
+            "installed": {
+                "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
+                "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+                "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
+            }
+        },
+        scopes=["https://www.googleapis.com/auth/gmail.send"],
+    )
+    
+    authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
+    
+    request.session['state'] = state
+    return redirect(authorization_url)
+
+# URL для получения и сохранения токенов
+def oauth2callback(request):
+    state = request.session['state']
+    flow = Flow.from_client_config(
+        {
+            "installed": {
+                "client_id": settings.GOOGLE_OAUTH2_CLIENT_ID,
+                "client_secret": settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+                "redirect_uris": [settings.GOOGLE_OAUTH2_REDIRECT_URI],
+            }
+        },
+        scopes=["https://www.googleapis.com/auth/gmail.send"],
+    )
+    
+    flow.fetch_token(authorization_response=request.build_absolute_uri(), state=state)
+    
+    credentials = flow.credentials
+    request.session['credentials'] = credentials_to_dict(credentials)
+    
+    return redirect('send_email')  # После успешной аутентификации отправляем пользователя на страницу отправки email
+
+# Функция для сохранения токенов
+def credentials_to_dict(credentials):
+    return {
+        'token': credentials.token,
+        'refresh_token': credentials.refresh_token,
+        'token_uri': credentials.token_uri,
+        'client_id': credentials.client_id,
+        'client_secret': credentials.client_secret,
+        'scopes': credentials.scopes,
+    }
+User = get_user_model()
+
+
+
+
+
+def activate(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = get_user_model().objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, get_user_model().DoesNotExist) as e:
+        logger.error(f"Activation error: {e}")
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        # Активируем пользователя
+        user.is_active = True
+        user.save()
+        
+        # Подтверждаем email
+        email_address = EmailAddress.objects.get_for_user(user, user.email)
+        if email_address:
+            email_address.verified = True
+            email_address.primary = True
+            email_address.save()
+        
+        # Автоматически входим
+        auth_login(request, user, backend='allauth.account.auth_backends.AuthenticationBackend')
+        
+        return redirect('dashboard')
+    else:
+        logger.error(f"Invalid activation link for uidb64: {uidb64}")
+        return render(request, 'account/email_confirm.html', {'error': 'Неверная ссылка активации'})
+
+def confirm_email(request, token):
+    try:
+        signer = Signer()
+        email = signer.unsign(token)
+        confirmation = EmailConfirmation.objects.get(email=email, confirmed_at=None)
+        confirmation.confirm()
+        user = confirmation.user
+        user.is_active = True
+        user.save()
+        return redirect('email_confirmed')
+    except BadSignature:
+        return redirect('email_confirmation_failed')
+    except EmailConfirmation.DoesNotExist:
+        return redirect('email_confirmation_failed')        
+def send_confirmation_email(request, user):
+    token = default_token_generator.make_token(user)
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    current_site = get_current_site(request)
+    activate_url = f"http://{current_site.domain}/activate/{uid}/{token}/"
+
+    # Отправка письма
+    subject = "Подтверждение регистрации"
+    message = f"Здравствуйте, {user.username}!\n\nДля подтверждения вашей почты перейдите по ссылке: {activate_url}\n\nЕсли вы не регистрировались, просто проигнорируйте это письмо."
+    send_mail(subject, message, "kwt.ideas@gmail.com", [user.email])
+
+
+def review_application(request, application_id):
+    application = get_object_or_404(Application, id=application_id)
+    
+    FormClass = {
+        'proposal': ProposalReviewForm,
+        'process': ProcessInnovationReviewForm,
+        'scientific': ScientificInnovationReviewForm
+    }.get(application.innovation_type)
+
+    if not FormClass:
+        return redirect('expert_dashboard')
+
+    if request.method == "POST":
+        form = FormClass(request.POST)
+        if form.is_valid():
+            # Общие поля
+            application.additional_questions = form.cleaned_data.get('additional_questions')
+            application.comments = form.cleaned_data.get('comments')
+            application.decision = form.cleaned_data.get('decision')
+
+            # Поля оценки
+            for field in form.cleaned_data:
+                if hasattr(application, field):
+                    setattr(application, field, form.cleaned_data[field])
+
+            # Расчет итоговой оценки
+            if application.innovation_type == 'proposal':
+                application.total_score = (
+                    form.cleaned_data['relevance'] +
+                    form.cleaned_data['cost_effectiveness'] +
+                    form.cleaned_data['solution_quality']
+                )
+            elif application.innovation_type == 'process':
+                application.total_score = (
+                    form.cleaned_data['novelty_level'] +
+                    form.cleaned_data['scalability'] +
+                    form.cleaned_data['implementation_scale'] +
+                    form.cleaned_data['effect_on_indicators']
+                )
+            elif application.innovation_type == 'scientific':
+                application.total_score = (
+                    form.cleaned_data['scalability'] +
+                    form.cleaned_data['financial_effect'] +
+                    form.cleaned_data['comparison_with_analogues']
+                )
+
+            application.status = 'under_review'
+            application.save()
+            return redirect('expert_dashboard')
+    else:
+        initial_data = {
+            field: getattr(application, field) 
+            for field in FormClass().base_fields
+            if hasattr(application, field)
+        }
+        form = FormClass(initial=initial_data)
+
+    return render(request, 'home/review_application.html', {
+        'form': form,
+        'application': application,
+        'total_score': application.total_score or 0
+    })
+
+def is_admin(user):
+    return user.is_superuser
+
+def all_applications_view(request):
+    applications = Application.objects.all()
+    return render(request, 'home/all_applications.html', {'applications': applications})
+@login_required
+
+@user_passes_test(is_admin)
+def manage_users(request):
+    users = User.objects.all()
+    groups = Group.objects.all()
+
+    if request.method == "POST":
+        user_id = request.POST.get("user_id")
+        action = request.POST.get("action")
+
+        if action == "delete":
+            User.objects.filter(id=user_id).delete()
+        elif action == "update_group":
+            new_group = request.POST.get("group")
+            user = User.objects.get(id=user_id)
+            user.groups.clear()  # Убираем старые группы
+            if new_group:
+                group = Group.objects.get(name=new_group)
+                user.groups.add(group)
+
+        return redirect("manage_users")  # Обновляем страницу
+
+    return render(request, "manage_users.html", {"users": users, "groups": groups})
+logger = logging.getLogger(__name__)
+
+@login_required
+def expert_dashboard(request):
+    if request.user.groups.filter(name="Эксперты").exists():
+        applications = Application.objects.filter(expert=request.user)
+        return render(request, "home/expert_dashboard.html", {"applications": applications})
+    else:
+        return redirect("dashboard")
+@login_required
+def assign_expert(request, application_id):
+    if request.method == "POST":
+        application = Application.objects.get(id=application_id)
+        expert_id = request.POST.get("expert")
+        expert = User.objects.get(id=expert_id)
+        application.expert = expert
+        application.status = "under_review"  # Статус "На рассмотрении"
+        application.save()
+        return redirect("moderation")
+    else:
+        application = Application.objects.get(id=application_id)
+        experts = User.objects.filter(groups__name="Эксперты")
+        return render(request, "home/assign_expert.html", {"application": application, "experts": experts})        
+@login_required
+def edit_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    groups = Group.objects.all()
+
+    if request.method == "POST":
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        group_name = request.POST.get("group")
+
+        if username:
+            user.username = username
+        if email:
+            user.email = email
+        if group_name:
+            group = Group.objects.get(name=group_name)
+            user.groups.set([group])  # Назначаем выбранную группу
+        user.save()
+
+        return redirect("manage_users")
+
+    return render(request, "edit_user.html", {"user": user, "groups": groups})
+
+@login_required
+def moderation_page(request):
+    if request.user.groups.filter(name="Ответственные сотрудники").exists():
+        applications = Application.objects.filter(status="submitted")
+        return render(request, "home/moderation_page.html", {"applications": applications})
+    else:
+        return redirect("dashboard")
+@login_required
+def assign_expert(request, application_id):
+    if request.method == "POST":
+        application = Application.objects.get(id=application_id)
+        expert_id = request.POST.get("expert")
+        expert = User.objects.get(id=expert_id)
+        application.expert = expert
+        application.status = "under_review"  # Статус "На рассмотрении"
+        application.save()
+        return redirect("moderation")  # Убедись, что имя маршрута правильное
+    else:
+        application = Application.objects.get(id=application_id)
+        experts = User.objects.filter(groups__name="Эксперты")
+        return render(request, "home/assign_expert.html", {"application": application, "experts": experts})
+@login_required
+def delete_user(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    user.delete()
+    return redirect("manage_users")
+class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy("home") 
+User = get_user_model()
+
+from django.contrib.auth import login as auth_login
+
+
+
+        
+def register(request):
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.is_active = False  # Деактивируем пользователя до подтверждения почты
+            user.save()
+
+            # Создаем токен подтверждения
+            confirmation = EmailConfirmation.objects.create(user=user, email=form.cleaned_data['email'])
+
+            # Отправляем письмо с подтверждением
+            subject = 'Подтверждение email'
+            html_message = render_to_string('email_confirmation.html', {
+                'user': user,
+                'confirmation_url': f'{settings.DOMAIN}/confirm-email/{confirmation.token}/'
+            })
+            plain_message = strip_tags(html_message)
+            send_mail(subject, plain_message, settings.DEFAULT_FROM_EMAIL, [form.cleaned_data['email']], html_message=html_message)
+
+            return redirect('email_confirmation_sent')
+    else:
+        form = RegistrationForm()
+
+    return render(request, 'register.html', {'form': form})
+
+
+from django.forms import modelformset_factory
+
+def application_page(request):
+    if request.method == "POST":
+        form = ApplicationForm(request.POST)
+        files = request.FILES.getlist("attached_files")  # ✅ Получаем список файлов
+
+        if form.is_valid():
+            application = form.save(commit=False)
+            application.author = request.user
+            application.save()
+
+            # ✅ Сохраняем файлы и привязываем их к заявке
+            for file in files:
+                attachment = Attachment.objects.create(file=file)
+                application.attachments.add(attachment)
+
+            return redirect("dashboard")
+    else:
+        form = ApplicationForm()
+
+    return render(request, "home/application_page.html", {"form": form})
+
+
+@login_required
+def assign_expert(request, application_id):
+    if request.method == "POST":
+        application = Application.objects.get(id=application_id)
+        expert_id = request.POST.get("expert")
+        expert = User.objects.get(id=expert_id)
+        application.expert = expert
+        application.status = "under_review"  # Статус "На рассмотрении"
+        application.save()
+        return redirect("moderation")  # Убедись, что имя маршрута правильное
+    else:
+        application = Application.objects.get(id=application_id)
+        experts = User.objects.filter(groups__name="Эксперты")
+        return render(request, "home/assign_expert.html", {"application": application, "experts": experts})
+
+
+
+def submit_application(request):
+    if request.method == "POST":
+        form = ApplicationForm(request.POST, request.FILES)
+        if form.is_valid():
+            application = form.save(commit=False)
+            application.author = request.user
+            application.save()
+
+            # Обработка файлов для всех типов
+            file_types = {
+                'educational_files': application.educational_files,
+                'scientific_files': application.scientific_files,
+                'proposal_files': application.proposal_files
+            }
+
+            for field, relation in file_types.items():
+                files = request.FILES.getlist(field)
+                for f in files:
+                    attachment = Attachment.objects.create(file=f)
+                    relation.add(attachment)
+
+            return redirect("dashboard")
+
+@login_required
+def dashboard_view(request):
+    """Личный кабинет с фильтрацией по ролям"""
+    
+    user = request.user
+
+    if user.groups.filter(name="Авторы").exists():
+        # Авторы видят только свои заявки
+        applications = Application.objects.filter(author=user)
+    
+    elif user.groups.filter(name="Эксперты").exists():
+        # Эксперты видят только назначенные им заявки
+        applications = Application.objects.filter(expert=user)
+    
+    elif user.groups.filter(name="Ответственные сотрудники").exists():
+        # Ответственные сотрудники видят все заявки
+        applications = Application.objects.all()
+    
+    else:
+        # Если нет группы, пустой список
+        applications = Application.objects.none()
+
+    return render(request, "home/dashboard.html", {"applications": applications})
+@csrf_exempt  # Для упрощения, лучше использовать csrf токены в реальном проекте
+@require_POST
+def send_message(request, application_id):
+    try:
+        data = json.loads(request.body)
+        application = Application.objects.get(id=application_id)
+        message_text = data.get('message')
+        chat_type = data.get('chat_type')
+
+        if not message_text:
+            return JsonResponse({'status': 'error', 'message': 'Message is required'}, status=400)
+
+        # Проверка прав доступа к чату (аналогично view_application)
+        available_chats = []
+        if request.user == application.author:
+            available_chats = ['author_expert', 'author_responsible']
+        elif request.user == application.expert:
+            available_chats = ['author_expert', 'expert_responsible']
+        elif request.user.groups.filter(name="Ответственные сотрудники").exists():
+            available_chats = ['author_responsible', 'expert_responsible']
+
+        if chat_type not in available_chats:
+            return JsonResponse({'status': 'error', 'message': 'Access denied'}, status=403)
+
+        # Создание сообщения
+        message = ChatMessage.objects.create(
+            application=application,
+            chat_type=chat_type,
+            sender=request.user,
+            message=message_text,
+            read=False
+        )
+
+        return JsonResponse({
+            'status': 'success',
+            'message': {
+                'text': message.message,
+                'timestamp': message.timestamp.strftime("%d.%m.%Y %H:%M"),
+                'sender': message.sender.username
+            }
+        })
+
+    except Application.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Application not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+def debug_file_view(request, file_path):
+    full_path = os.path.join(settings.MEDIA_ROOT, file_path)
+    if os.path.exists(full_path):
+        return FileResponse(open(full_path, 'rb'))
+    return HttpResponse("File not found", status=404)
+@login_required
+def view_application(request, application_id):
+    application = get_object_or_404(Application, id=application_id)
+    def get_available_chats(user, application):
+        chats = []
+        if user == application.author:
+            chats = [
+                ('author_expert', 'Чат с экспертом'),
+                ('author_responsible', 'Чат с ответственным'),
+            ]
+        elif user == application.expert:
+            chats = [
+                ('author_expert', 'Чат с автором'),
+                ('expert_responsible', 'Чат с ответственным'),
+            ]
+        elif user.groups.filter(name="Ответственные сотрудники").exists():
+            chats = [
+                ('author_responsible', 'Чат с автором'),
+                ('expert_responsible', 'Чат с экспертом'),
+            ]
+        return chats
+    available_chats = get_available_chats(request.user, application)
+    active_chat = request.GET.get('chat', available_chats[0][0] if available_chats else None)
+      
+    if request.method == 'POST' and 'send_message' in request.POST:
+        chat_type = request.POST.get('chat_type')
+        message_text = request.POST.get('message', '').strip()
+        files = request.FILES.getlist('file')  # Получаем список файлов
+        # Проверка доступа к чату
+        current_chats = get_available_chats(request.user, application)
+        allowed_chat_types = [ct for ct, _ in current_chats]
+        
+        if chat_type not in allowed_chat_types:
+            return HttpResponseForbidden("Нет доступа к этому чату")
+            
+        if message_text or files:
+            try:
+                message = ChatMessage.objects.create(
+                    application=application,
+                    chat_type=chat_type,
+                    sender=request.user,
+                    message=message_text,
+                    read=False
+                )
+                
+                for file in files:
+                    try:
+                        if file.size == 0:
+                            raise ValidationError("Пустой файл")
+                            
+                        attachment = Attachment(file=file)
+                        attachment.full_clean()  # Вызывает валидацию
+                        attachment.save()
+                        message.attachments.add(attachment)
+                        
+                    except (ValidationError, ValueError) as e:
+                        # Логируем ошибку, но продолжаем обработку
+                        print(f"Ошибка загрузки файла {file.name}: {e}")
+                        # Можно добавить сообщение об ошибке для пользователя
+                
+                return redirect(f"{application.get_absolute_url()}?chat={chat_type}")
+            except Exception as e:
+                print(f"Ошибка: {e}")
+                # Обработка ошибки создания сообщения
+    # Инициализируем chat_messages как словарь по умолчанию
+    chat_messages = {}
+    
+    # Определяем доступные чаты
+    available_chats = []
+    if request.user == application.author:
+        available_chats = [
+            ('author_expert', 'Чат с экспертом'),
+            ('author_responsible', 'Чат с ответственным'),
+        ]
+    elif request.user == application.expert:
+        available_chats = [
+            ('author_expert', 'Чат с автором'),
+            ('expert_responsible', 'Чат с ответственным'),
+        ]
+    elif request.user.groups.filter(name="Ответственные сотрудники").exists():
+        available_chats = [
+            ('author_responsible', 'Чат с автором'),
+            ('expert_responsible', 'Чат с экспертом'),
+        ]
+    
+    # Заполняем chat_messages данными
+    for chat_type, _ in available_chats:
+        chat_messages[chat_type] = list(
+            application.chat_messages.filter(chat_type=chat_type).order_by('timestamp')
+        )
+    
+    active_chat = request.GET.get('chat', available_chats[0][0] if available_chats else None)
+    chat_data = {}
+    for chat_type, chat_name in available_chats:
+        messages = application.chat_messages.filter(chat_type=chat_type).order_by('timestamp')
+        unread_count = sum(1 for msg in messages if not msg.read and msg.sender != request.user)
+        
+        chat_data[chat_type] = {
+            'name': chat_name,
+            'messages': messages,
+            'unread_count': unread_count
+        }
+    if active_chat:
+        application.chat_messages.filter(
+            chat_type=active_chat,
+            read=False
+        ).exclude(
+            sender=request.user
+        ).update(read=True)
+        # Обновляем счетчик непрочитанных
+        if active_chat in chat_data:
+            chat_data[active_chat]['unread_count'] = 0
+    return render(request, "home/view_application.html", {
+        'chat_data': chat_data,
+        'application': application,
+        'available_chats': available_chats,
+        'chat_messages': chat_messages or {},  # Гарантируем, что это будет словарь
+        'active_chat': active_chat,
+    })
+
+from pathlib import Path
+from django.http import Http404, FileResponse, HttpResponse
+from django.core.exceptions import PermissionDenied
+import os
+
+@login_required
+def protected_file(request, file_path):
+    """
+    Защищенный доступ к файлам с проверкой прав
+    """
+    try:
+        # Используем pathlib для корректного объединения путей
+        full_path = Path(settings.MEDIA_ROOT) / file_path
+        
+        # Проверяем существование файла
+        if not full_path.exists():
+            raise Http404("Файл не найден")
+        
+        # Проверяем размер файла
+        if full_path.stat().st_size == 0:
+            return HttpResponse("Файл пуст", status=400)
+        
+        # Проверяем права доступа
+        filename = os.path.basename(file_path)
+        attachment = Attachment.objects.filter(file=f"attachments/{filename}").first()
+        
+        if not attachment:
+            raise PermissionDenied("Доступ запрещен")
+        
+        # Проверяем, имеет ли пользователь доступ
+        has_access = False
+        if attachment.chatmessage_set.exists():
+            message = attachment.chatmessage_set.first()
+            if request.user in [message.sender, message.application.author, message.application.expert]:
+                has_access = True
+        
+        if not has_access and not request.user.is_staff:
+            raise PermissionDenied("Доступ запрещен")
+        
+        # Отдаем файл
+        return FileResponse(open(full_path, 'rb'))
+    
+    except Exception as e:
+        # Логируем ошибку для отладки
+        print(f"Ошибка доступа к файлу: {e}")
+        raise Http404("Ошибка доступа к файлу")
+        с
+def logout_view(request):
+    logout(request)
+    return redirect("/") 
+
+
+
+
+
+
+
+base py 
+
+"""
+Django settings for kwt_ideas1 project.
+
+Generated by 'django-admin startproject' using Django 5.1.6.
+
+For more information on this file, see
+https://docs.djangoproject.com/en/5.1/topics/settings/
+
+For the full list of settings and their values, see
+https://docs.djangoproject.com/en/5.1/ref/settings/
+"""
+
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+import os
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(PROJECT_DIR)
+
+
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
+
+
+# Application definition
+
+INSTALLED_APPS = [
+    "home",
+
+    "search",
+    "wagtail.contrib.forms",
+    "wagtail.contrib.redirects",
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    "wagtail.rich_text",
+    "wagtail.embeds",
+    "wagtail.sites",
+    "wagtail.users",
+    "wagtail.snippets",
+    "wagtail.documents",
+    "wagtail.images",
+    "wagtail.search",
+    "wagtail.admin",
+    "wagtail",
+    "modelcluster",
+    "taggit",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "channels",
+    'django_otp',
+    'django_otp.plugins.otp_totp',  # Для приложений аутентификации (Google Authenticator)
+    'django_otp.plugins.otp_email',  # Для email кодов
+    'django_otp.plugins.otp_static',  # Для резервных кодов
+    
+]
+SITE_ID = 1
+MIDDLEWARE = [
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    'django_otp.middleware.OTPMiddleware',
+    'home.middleware.TwoFactorAuthMiddleware',
+    'home.middleware.RememberDeviceMiddleware',
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "wagtail.contrib.redirects.middleware.RedirectMiddleware",
+    'allauth.account.middleware.AccountMiddleware',
+    
+]
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+ROOT_URLCONF = "kwt_ideas1.urls"
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+TEMPLATES = [
+    {
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [
+            os.path.join(PROJECT_DIR, "templates"),
+        ],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                'home.notifications.unread_messages',
+            ],
+            'libraries': {  # Если хотите явно указать (не обязательно)
+                'app_filters': 'home.templatetags.app_filters',
+            },
+        },
+    },
+]
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+
+]
+
+
+
+
+SITE_ID = 1
+# settings.py
+
+# Настройки для OAuth 2.0
+GOOGLE_OAUTH2_CLIENT_ID = '563909432254-h4bdmsjb5q7ra6clha5pb46ovnqp4mtp.apps.googleusercontent.com'
+GOOGLE_OAUTH2_CLIENT_SECRET = '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'
+GOOGLE_OAUTH2_REDIRECT_URI = 'http://127.0.0.1:8000/oauth2callback/'
+SOCIAL_AUTH_GOOGLE_CLIENT_ID = '563909432254-h4bdmsjb5q7ra6clha5pb46ovnqp4mtp.apps.googleusercontent.com'
+SOCIAL_AUTH_GOOGLE_SECRET = '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'
+SOCIAL_AUTH_GOOGLE_SCOPE = ['email']  # Список разрешений (например, только email)
+SOCIAL_AUTH_GOOGLE_EXTRA_DATA = ['first_name', 'last_name']  # Дополнительные данные
+
+# allauth
+
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
+ACCOUNT_LOGIN_ATTEMPTS_TIMEOUT = 300  # 5 минут
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_LOGIN_METHODS = ['email','username']
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_EMAIL_CONFIRMATION_HMAC = True  # Используйте HMAC вместо подписи
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True  # Автовход после подтверждения
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_EMAIL_CONFIRMATION_TEMPLATE = "account/email_confirmation"
+ACCOUNT_EMAIL_CONFIRMATION_SUBJECT = None  # Используем txt файл для темы
+
+LOGIN_REDIRECT_URL = '/'
+# Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django_smtp_ssl.SSLEmailBackend'
+EMAIL_USE_TLS = True
+
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_PORT = 465
+EMAIL_HOST_USER = 'kwt.ideas@gmail.com'  # Ваш email
+EMAIL_HOST_PASSWORD = 'vypisfvaopjhgkcu'  # Пароль для приложения
+#EMAIL_HOST_PASSWORD = 'kwt277382'  # Пароль для приложения
+DEFAULT_FROM_EMAIL = 'kwt.ideas@gmail.com'
+EMAIL_TIMEOUT = 10
+ACCOUNT_FORMS = {
+    'signup': 'home.forms.RegisterForm',
+}
+SESSION_COOKIE_NAME = 'kwt_session'
+CSRF_COOKIE_SECURE = False  # Для разработки без HTTPS
+SESSION_COOKIE_SECURE = False  # Для разработки
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Сессия сохраняется после закрытия браузера
+ACCOUNT_SESSION_REMEMBER = True  # Для allauth
+SESSION_COOKIE_NAME = 'kwt_secure_session'
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30  # 30 дней
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+
+SESSION_COOKIE_HTTPONLY = True
+
+SESSION_COOKIE_SAMESITE = 'Lax'
+# Настройки для django-otp
+OTP_LOGIN_URL = '/account/2fa/'
+OTP_EMAIL_SUBJECT = 'Ваш код подтверждения'
+OTP_EMAIL_SENDER = 'kwt.ideas@gmail.com'  # Email отправителя кодов
+OTP_EMAIL_SUBJECT = 'Ваш код подтверждения'  # Тема письма
+OTP_EMAIL_SENDER = None  # Отключаем встроенную отправку писем
+OTP_EMAIL_NO_DELIVERY = True  # Отключаем автоматическую отправку писем
+OTP_LOGIN_URL = 'two-factor-authenticate'
+LOGIN_URL = 'account_login'
+ACCOUNT_LOGIN_VIEW = 'home.views.CustomLoginView'  # Добавь это
+LOGIN_REDIRECT_URL = 'dashboard'
+OTP_DEVICE_VALIDITY = 60 * 60 * 24 * 30  # 30 дней
+
+EMAIL_FILE_PATH = os.path.join(BASE_DIR, "sent_emails")
+if not os.path.exists(EMAIL_FILE_PATH):
+    os.makedirs(EMAIL_FILE_PATH)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "custom_file": {
+            "level": "DEBUG",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, "auth_debug.log"),
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "auth": {
+            "handlers": ["custom_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}
+WSGI_APPLICATION = "kwt_ideas1.wsgi.application"
+ASGI_APPLICATION = 'kwt_ideas1.asgi.application'
+
+# Database
+# https://docs.djangoproject.com/en/5.1/ref/settings/#databases
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+    }
+}
+
+
+# Password validation
+# https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
+]
+
+
+# Internationalization
+# https://docs.djangoproject.com/en/5.1/topics/i18n/
+
+LANGUAGE_CODE = "en-us"
+
+TIME_ZONE = "UTC"
+
+USE_I18N = True
+
+USE_TZ = True
+
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.1/howto/static-files/
+
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
+
+STATICFILES_DIRS = [
+    os.path.join(PROJECT_DIR, "static"),
+]
+
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
+STATIC_URL = "/static/"
+
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_URL = "/media/"
+MEDIA_URL = '/protected/media/'  # Изменили с /media/
+X_FRAME_OPTIONS = 'DENY'  # Защита от clickjacking
+# Default storage settings, with the staticfiles storage updated.
+# See https://docs.djangoproject.com/en/5.1/ref/settings/#std-setting-STORAGES
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    # ManifestStaticFilesStorage is recommended in production, to prevent
+    # outdated JavaScript / CSS assets being served from cache
+    # (e.g. after a Wagtail upgrade).
+    # See https://docs.djangoproject.com/en/5.1/ref/contrib/staticfiles/#manifeststaticfilesstorage
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.ManifestStaticFilesStorage",
+    },
+}
+
+# Django sets a maximum of 1000 fields per form by default, but particularly complex page models
+# can exceed this limit within Wagtail's page editor.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000
+
+
+# Wagtail settings
+
+WAGTAIL_SITE_NAME = "kwt_ideas1"
+
+# Search
+# https://docs.wagtail.org/en/stable/topics/search/backends.html
+WAGTAILSEARCH_BACKENDS = {
+    "default": {
+        "BACKEND": "wagtail.search.backends.database",
+    }
+}
+
+# Base URL to use when referring to full URLs within the Wagtail admin backend -
+# e.g. in notification emails. Don't include '/admin' or a trailing slash
+WAGTAILADMIN_BASE_URL = "http://example.com"
+
+# Allowed file extensions for documents in the document library.
+# This can be omitted to allow all files, but note that this may present a security risk
+# if untrusted users are allowed to upload files -
+# see https://docs.wagtail.org/en/stable/advanced_topics/deploying.html#user-uploaded-files
+WAGTAILDOCS_EXTENSIONS = ['csv', 'docx', 'key', 'odt', 'pdf', 'pptx', 'rtf', 'txt', 'xlsx', 'zip']
+# После входа перенаправлять пользователя в личный кабинет
+LOGIN_REDIRECT_URL = "/dashboard/"
+LOGOUT_REDIRECT_URL = 'home'
+ACCOUNT_LOGOUT_ON_GET = True
+
+
+
+
+
+
+
+base html
+
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>{% block title %}КВт идей{% endblock %}</title>
+   
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background: #0078D7;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+            font-size: 20px;
+        }
+        nav {
+            background: #005A9E;
+            padding: 10px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        nav a, nav button {
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+        }
+        nav a:hover, nav button:hover {
+            text-decoration: underline;
+        }
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            text-align: left;
+            z-index: 1000;
+        }
+        .dropdown-content a {
+            color: black;
+            padding: 10px;
+            text-decoration: none;
+            display: block;
+        }
+        .dropdown-content a:hover {
+            background-color: #f1f1f1;
+        }
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+        main {
+            padding: 20px;
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        footer {
+            text-align: center;
+            padding: 15px;
+            background: #0078D7;
+            color: white;
+            margin-top: 20px;
+        }
+        .review-container {
+        display: flex;
+        gap: 20px;
+    }
+    
+    .review-container {
+        display: flex;
+        gap: 2rem;
+        padding: 1rem;
+    }
+    
+    .review-form, .application-details {
+        flex: 1;
+    }
+    
+    .card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        height: 100%;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #0078D7, #005A9E);
+        color: white;
+        padding: 1.5rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+    
+    .card-body {
+        padding: 1.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+    }
+    
+    .form-control:focus {
+        border-color: #0078D7;
+        box-shadow: 0 0 0 3px rgba(0, 120, 215, 0.25);
+        outline: none;
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0078D7, #005A9E);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #005A9E, #003A6B);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .detail-group {
+        margin-bottom: 2rem;
+    }
+    
+    .detail-group h3 {
+        font-size: 1.1rem;
+        color: #333;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .detail-item {
+        display: flex;
+        margin-bottom: 1rem;
+        align-items: flex-start;
+    }
+    
+    .detail-label {
+        flex: 0 0 120px;
+        font-weight: 600;
+        color: #555;
+        margin-right: 1rem;
+    }
+    
+    .detail-value {
+        flex: 1;
+        color: #333;
+        word-break: break-word;
+    }
+    
+    .attachments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .attachment-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .attachment-item a {
+        color: #0078D7;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .attachment-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .no-attachments {
+        color: #777;
+        font-style: italic;
+        padding: 1rem;
+        border: 1px dashed #ddd;
+        border-radius: 5px;
+    }
+    </style>
+</head>
+<body>
+
+<header>
+    КВт идей – Платформа для инноваций
+</header>
+
+<nav>
+    <a href="/">Главная</a>
+    <a href="/dashboard/">Личный кабинет</a>
+
+    {% if user.is_authenticated %}
+        {% if "Ответственные сотрудники" in user.groups.all|join:", " or "Эксперты" in user.groups.all|join:", " or user.is_superuser %}
+            <div class="dropdown">
+                <button class="dropbtn">Управление</button>
+                <div class="dropdown-content">
+                    {% if "Ответственные сотрудники" in user.groups.all|join:", " %}
+                        <a href="{% url 'all_applications' %}">Все заявки</a>
+                        <a href="/moderation/">Модерация</a>
+                    {% endif %}
+                    {% if "Эксперты" in user.groups.all|join:", " %}
+                        <a href="{% url 'my_applications' %}">Мои заявки</a>
+                        <a href="/expert/">Экспертиза</a>
+                    {% endif %}
+                    {% if user.is_superuser %}
+                        <a href="{% url 'manage_users' %}">Управление пользователями</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+        
+        <form method="post" action="{% url 'logout' %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit">Выйти</button>
+        </form>
+    {% else %}
+        <a href="{% url 'account_login' %}">Войти</a>
+        <a href="{% url 'account_signup' %}">Регистрация</a>
+    {% endif %}
+</nav>
+
+<main>
+    {% block content %}{% endblock %}
+</main>
+
+<footer>
+    © 2025 КВт идей | Все права защищены
+</footer>
+
+</body>
+</html>
+
+
+
+dashboard html
+
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Личный кабинет{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h1>Добро пожаловать, {{ user.username }}!</h1>
+  <p>Ваш профиль:</p>
+  <ul>
+    <li>Имя: {{ user.first_name }}</li>
+    <li>Фамилия: {{ user.last_name }}</li>
+    <li>Отчество: {{ user.profile.middle_name }}</li>
+    <li>Номер телефона: {{ user.profile.phone }}</li>
+  </ul>
+  <a href="{% url 'edit_profile' %}" class="btn btn-secondary">Редактировать профиль</a>
+</div>
+{% endblock %}
+
+
+
+edit_profile html
+
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Редактировать профиль{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-secondary text-white">
+      <h3>Редактировать основную информацию</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="id_first_name" class="form-label">Имя</label>
+          <input type="text" name="first_name" class="form-control" id="id_first_name" value="{{ form.first_name.value }}" required>
+        </div>
+        <div class="mb-3">
+          <label for="id_last_name" class="form-label">Фамилия</label>
+          <input type="text" name="last_name" class="form-control" id="id_last_name" value="{{ form.last_name.value }}" required>
+        </div>
+        <div class="mb-3">
+          <label for="id_middle_name" class="form-label">Отчество</label>
+          <input type="text" name="middle_name" class="form-control" id="id_middle_name" value="{{ form.middle_name.value }}">
+        </div>
+        <div class="mb-3">
+          <label for="id_phone" class="form-label">Номер телефона</label>
+          <input type="text" name="phone" class="form-control" id="id_phone" value="{{ form.phone.value }}" required>
+          {% if form.phone.errors %}
+            <div class="text-danger">{{ form.phone.errors }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+change_username html
+
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Смена юзернейма{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white">
+      <h3>Сменить юзернейм</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {% if not request.session.username_change_code %}
+        <div class="mb-3">
+          <label for="id_new_username" class="form-label">Новый юзернейм</label>
+          <input type="text" name="new_username" class="form-control" id="id_new_username" placeholder="Введите новый юзернейм" required>
+        </div>
+        <button type="submit" name="send_code" class="btn btn-outline-primary">Отправить код подтверждения</button>
+        {% else %}
+        <div class="mb-3">
+          <label for="id_new_username" class="form-label">Новый юзернейм</label>
+          <input type="text" name="new_username" class="form-control" id="id_new_username" value="{{ request.session.pending_new_username }}" readonly>
+        </div>
+        <div class="mb-3">
+          <label for="id_confirmation_code" class="form-label">Код подтверждения</label>
+          <input type="text" name="confirmation_code" class="form-control" id="id_confirmation_code" placeholder="Введите полученный код" required>
+          {% if form.confirmation_code.errors %}
+            <div class="text-danger">{{ form.confirmation_code.errors }}</div>
+          {% endif %}
+        </div>
+        <button type="submit" name="confirm_change" class="btn btn-primary">Подтвердить смену юзернейма</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+
+change_password html
+
+
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Смена пароля{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-danger text-white">
+      <h3>Сменить пароль</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <!-- Стандартные поля смены пароля -->
+        <div class="mb-3">
+          <label for="{{ form.old_password.id_for_label }}" class="form-label">Старый пароль</label>
+          {{ form.old_password }}
+          {% if form.old_password.errors %}<div class="text-danger">{{ form.old_password.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+          <label for="{{ form.new_password1.id_for_label }}" class="form-label">Новый пароль</label>
+          {{ form.new_password1 }}
+          {% if form.new_password1.errors %}<div class="text-danger">{{ form.new_password1.errors }}</div>{% endif %}
+        </div>
+        <div class="mb-3">
+          <label for="{{ form.new_password2.id_for_label }}" class="form-label">Подтверждение нового пароля</label>
+          {{ form.new_password2 }}
+          {% if form.new_password2.errors %}<div class="text-danger">{{ form.new_password2.errors }}</div>{% endif %}
+        </div>
+        <!-- Поле для ввода кода подтверждения -->
+        <div class="mb-3">
+          <label for="id_confirmation_code" class="form-label">Код подтверждения</label>
+          {{ form.confirmation_code }}
+          {% if form.confirmation_code.errors %}<div class="text-danger">{{ form.confirmation_code.errors }}</div>{% endif %}
+        </div>
+        {% if not request.session.password_change_code %}
+        <button type="submit" name="send_code" class="btn btn-outline-primary">Отправить код подтверждения</button>
+        {% else %}
+        <button type="submit" name="confirm_change" class="btn btn-primary">Подтвердить смену пароля</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+
+
+
+change_username html
+
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Смена юзернейма{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-info text-white">
+      <h3>Сменить юзернейм</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {% if not request.session.username_change_code %}
+        <div class="mb-3">
+          <label for="id_new_username" class="form-label">Новый юзернейм</label>
+          <input type="text" name="new_username" class="form-control" id="id_new_username" placeholder="Введите новый юзернейм" required>
+        </div>
+        <button type="submit" name="send_code" class="btn btn-outline-primary">Отправить код подтверждения</button>
+        {% else %}
+        <div class="mb-3">
+          <label for="id_new_username" class="form-label">Новый юзернейм</label>
+          <input type="text" name="new_username" class="form-control" id="id_new_username" value="{{ request.session.pending_new_username }}" readonly>
+        </div>
+        <div class="mb-3">
+          <label for="id_confirmation_code" class="form-label">Код подтверждения</label>
+          <input type="text" name="confirmation_code" class="form-control" id="id_confirmation_code" placeholder="Введите полученный код" required>
+          {% if form.confirmation_code.errors %}
+            <div class="text-danger">{{ form.confirmation_code.errors }}</div>
+          {% endif %}
+        </div>
+        <button type="submit" name="confirm_change" class="btn btn-primary">Подтвердить смену юзернейма</button>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

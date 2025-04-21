@@ -1,0 +1,153 @@
+<!-- change_username.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Смена юзернейма{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm border-primary">
+    <div class="card-header bg-primary text-white">
+      <h3 class="mb-0"><i class="fas fa-user-edit me-2"></i>Смена юзернейма</h3>
+    </div>
+    <div class="card-body">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        
+        {% if not session_data %}
+          <!-- Ввод нового юзернейма -->
+          <div class="mb-4">
+            <label class="form-label">Новый юзернейм</label>
+            <input type="text" 
+                   name="new_username" 
+                   class="form-control form-control-lg {% if 'Этот юзернейм уже занят' in messages %}is-invalid{% endif %}" 
+                   placeholder="Введите новый юзернейм"
+                   required>
+          </div>
+          
+          <div class="d-grid gap-2">
+            <button type="submit" 
+                    name="send_code" 
+                    class="btn btn-primary btn-lg">
+              <i class="fas fa-paper-plane me-2"></i>Отправить код
+            </button>
+          </div>
+        
+        {% else %}
+          <!-- Ввод кода подтверждения -->
+          <div class="mb-4">
+            <p class="lead">
+              Код подтверждения отправлен на<br>
+              <strong class="text-primary">{{ request.user.email }}</strong>
+            </p>
+            
+            <div class="mb-4">
+              <label class="form-label">Новый юзернейм</label>
+              <input type="text" 
+                     value="{{ session_data.new_username }}" 
+                     class="form-control form-control-lg" 
+                     readonly>
+            </div>
+            
+            <div class="mb-4">
+              <label class="form-label">Код подтверждения</label>
+              <input type="text" 
+                     name="confirmation_code" 
+                     class="form-control form-control-lg text-center" 
+                     placeholder="••••••"
+                     pattern="\d{6}"
+                     title="Введите 6 цифр"
+                     required>
+            </div>
+            
+            <div class="d-grid gap-2">
+              <button type="submit" 
+                      name="confirm_change" 
+                      class="btn btn-success btn-lg">
+                <i class="fas fa-check-circle me-2"></i>Подтвердить
+              </button>
+              
+              <div class="mt-3 text-center">
+                <p class="text-muted mb-2">
+                  Не получили код? 
+                  <span id="resend-container">
+                    {% if remaining_cooldown > 0 %}
+                      <span class="text-muted">Повторная отправка через <span id="countdown">{{ remaining_cooldown }}</span> сек.</span>
+                    {% else %}
+                      <a href="?resend=1" 
+                         class="text-primary text-decoration-none"
+                         id="resend-link">
+                        <i class="fas fa-redo me-1"></i>Отправить повторно
+                      </a>
+                    {% endif %}
+                  </span>
+                </p>
+                
+                <a href="{% url 'change_username' %}" 
+                   class="btn btn-outline-secondary btn-sm">
+                  <i class="fas fa-sync me-1"></i>Начать заново
+                </a>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const countdownEl = document.getElementById('countdown');
+    const resendContainer = document.getElementById('resend-container');
+    
+    if (countdownEl) {
+        let seconds = parseInt(countdownEl.textContent);
+        
+        const timer = setInterval(function() {
+            seconds--;
+            countdownEl.textContent = seconds;
+            
+            if (seconds <= 0) {
+                clearInterval(timer);
+                resendContainer.innerHTML = `
+                    <a href="?resend=1" 
+                       class="text-primary text-decoration-none"
+                       id="resend-link">
+                        <i class="fas fa-redo me-1"></i>Отправить повторно
+                    </a>
+                `;
+            }
+        }, 1000);
+    }
+});
+</script>
+
+<style>
+.form-control-lg {
+    font-size: 1.1rem;
+    padding: 1rem;
+}
+
+#resend-link {
+    transition: opacity 0.3s ease;
+}
+
+#resend-link:hover {
+    opacity: 0.8;
+}
+
+.alert {
+    border-radius: 10px;
+}
+</style>
+{% endblock %}

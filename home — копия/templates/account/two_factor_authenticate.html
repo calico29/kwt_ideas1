@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header">
+            <h2>Двухфакторная аутентификация</h2>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+            
+            <p>Мы отправили 6-значный код на ваш email <strong>{{ user.email }}</strong>.</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="token">Код подтверждения:</label>
+                    <input type="text" 
+                           id="token"
+                           name="token" 
+                           class="form-control" 
+                           required
+                           pattern="[0-9]{6}"
+                           title="Введите 6 цифр">
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Подтвердить</button>
+            </form>
+            
+            <p class="mt-3">
+                Не получили код? 
+                <span id="resend-container">
+                    {% if remaining_cooldown and remaining_cooldown > 0 %}
+                        <span class="text-muted">Повторная отправка через <span id="countdown">{{ remaining_cooldown }}</span> сек.</span>
+                    {% else %}
+                        <a href="?resend=1" id="resend-link">Отправить повторно</a>
+                    {% endif %}
+                </span>
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const countdownEl = document.getElementById('countdown');
+    const resendContainer = document.getElementById('resend-container');
+    
+    if (countdownEl) {
+        let seconds = parseInt(countdownEl.textContent);
+        
+        const timer = setInterval(function() {
+            seconds--;
+            countdownEl.textContent = seconds;
+            
+            if (seconds <= 0) {
+                clearInterval(timer);
+                resendContainer.innerHTML = '<a href="?resend=1" id="resend-link">Отправить повторно</a>';
+            }
+        }, 1000);
+    }
+});
+</script>
+
+<style>
+#resend-link {
+    cursor: pointer;
+}
+.text-muted {
+    color: #6c757d;
+}
+</style>
+{% endblock %}

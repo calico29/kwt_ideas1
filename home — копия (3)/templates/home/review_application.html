@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="review-container">
+    <!-- Детали заявки сверху -->
+    <div class="application-details">
+        <div class="card">
+            <div class="card-header">
+                <h2>Детали заявки: {{ application.title }}</h2>
+            </div>
+            <div class="card-body">
+                <!-- Общие поля -->
+                <div class="detail-group">
+                    <h3>Основная информация</h3>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="icon-type"></i> Тип заявки:</span>
+                        <span class="detail-value">{{ application.get_innovation_type_display }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="icon-status"></i> Статус:</span>
+                        <span class="detail-value">{{ application.get_status_display }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="icon-author"></i> Автор:</span>
+                        <span class="detail-value">{{ application.author.username }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="icon-phone"></i> Контактный телефон:</span>
+                        <span class="detail-value">{{ application.phone }}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label"><i class="icon-description"></i> Описание:</span>
+                        <span class="detail-value">{{ application.description }}</span>
+                    </div>
+                </div>
+                
+                <!-- Образовательная инновация -->
+                {% if application.innovation_type == 'educational' %}
+                    <div class="detail-group">
+                        <h3>Образовательная инновация</h3>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-authors"></i> Авторы инновации:</span>
+                            <span class="detail-value">{{ application.authors }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-product"></i> Тип продукта:</span>
+                            <span class="detail-value">{{ application.product_type }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-usage"></i> Использование:</span>
+                            <span class="detail-value">{{ application.get_usage_type_display }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-link"></i> Ссылка на ресурс:</span>
+                            <span class="detail-value">
+                                {% if application.resource_link %}
+                                    <a href="{{ application.resource_link }}" target="_blank">{{ application.resource_link }}</a>
+                                {% else %}
+                                    Нет ссылки
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-files"></i> Материалы ЭУМК:</span>
+                            <span class="detail-value">
+                                {% if application.educational_files %}
+                                    <a href="{{ application.educational_files.url }}" download>
+                                        <i class="icon-download"></i> Скачать материалы
+                                    </a>
+                                {% else %}
+                                    Нет файлов
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Научно-техническая инновация -->
+                {% if application.innovation_type == 'scientific' %}
+                    <div class="detail-group">
+                        <h3>Научно-техническая инновация</h3>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-patents"></i> Ссылки на патенты и статьи:</span>
+                            <span class="detail-value">{{ application.patents_links }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-readiness"></i> Уровень готовности:</span>
+                            <span class="detail-value">{{ application.readiness_level }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-department"></i> Кафедра/лаборатория:</span>
+                            <span class="detail-value">{{ application.department }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-documents"></i> Акты и документы:</span>
+                            <span class="detail-value">
+                                {% if application.scientific_files %}
+                                    <a href="{{ application.scientific_files.url }}" download>
+                                        <i class="icon-download"></i> Скачать документы
+                                    </a>
+                                {% else %}
+                                    Нет файлов
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Процессная инновация -->
+                {% if application.innovation_type == 'process' %}
+                    <div class="detail-group">
+                        <h3>Процессная инновация</h3>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-innovation-type"></i> Тип инновации:</span>
+                            <span class="detail-value">{{ application.process_innovation_type }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-steps"></i> Шаги реализации:</span>
+                            <span class="detail-value">{{ application.implementation_steps }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-conclusion"></i> Заключение о внедрении:</span>
+                            <span class="detail-value">
+                                {% if application.process_files %}
+                                    <a href="{{ application.process_files.url }}" download>
+                                        <i class="icon-download"></i> Скачать заключение
+                                    </a>
+                                {% else %}
+                                    Нет файла
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Инновационное предложение -->
+                {% if application.innovation_type == 'proposal' %}
+                    <div class="detail-group">
+                        <h3>Инновационное предложение</h3>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-problem"></i> Описание проблемы:</span>
+                            <span class="detail-value">{{ application.problem_description }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-solution"></i> Предлагаемое решение:</span>
+                            <span class="detail-value">{{ application.solution }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-effects"></i> Ожидаемые эффекты:</span>
+                            <span class="detail-value">{{ application.expected_effects }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label"><i class="icon-proposal-files"></i> Дополнительные документы:</span>
+                            <span class="detail-value">
+                                {% if application.proposal_files %}
+                                    <a href="{{ application.proposal_files.url }}" download>
+                                        <i class="icon-download"></i> Скачать документы
+                                    </a>
+                                {% else %}
+                                    Нет файлов
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                {% endif %}
+                
+                <!-- Прикрепленные файлы -->
+                <div class="detail-group">
+                    <h3>Прикрепленные файлы</h3>
+                    {% if application.attachments.exists %}
+                        <div class="attachments-list">
+                            {% for attachment in application.attachments.all %}
+                                <div class="attachment-item">
+                                    <a href="{{ attachment.file.url }}" download>
+                                        <i class="icon-attachment"></i> {{ attachment.file.name }}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="no-attachments">
+                            <p>Нет прикрепленных файлов</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Форма оценки снизу -->
+    <div class="review-form">
+        <div class="card">
+            <div class="card-header">
+                <h2>Форма оценки</h2>
+            </div>
+            <div class="card-body">
+                <form method="post" id="review-form">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="{{ form.additional_questions.id_for_label }}">
+                            <i class="icon-question"></i> Дополнительные вопросы к автору
+                        </label>
+                        <textarea class="form-control" id="{{ form.additional_questions.id_for_label }}" name="{{ form.additional_questions.html_name }}" rows="3">{{ form.additional_questions.value|default:"" }}</textarea>
+                    </div>
+                    
+                    {% if application.innovation_type == 'proposal' %}
+                        <div class="form-group">
+                            <label for="{{ form.relevance.id_for_label }}">
+                                <i class="icon-star"></i> Актуальность для СФ МЭИ
+                            </label>
+                            <select class="form-control" id="{{ form.relevance.id_for_label }}" name="{{ form.relevance.html_name }}">
+                                {% for choice in form.relevance.field.choices %}
+                                    <option value="{{ choice.0 }}"{% if form.relevance.value == choice.0 %} selected{% endif %}>{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.cost_effectiveness.id_for_label }}">
+                                <i class="icon-scale"></i> Отношение полезного эффекта к затратам
+                            </label>
+                            <select class="form-control" id="{{ form.cost_effectiveness.id_for_label }}" name="{{ form.cost_effectiveness.html_name }}">
+                                {% for choice in form.cost_effectiveness.field.choices %}
+                                    <option value="{{ choice.0 }}"{% if form.cost_effectiveness.value == choice.0 %} selected{% endif %}>{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.solution_quality.id_for_label }}">
+                                <i class="icon-implement"></i> Уровень проработки описания решения
+                            </label>
+                            <select class="form-control" id="{{ form.solution_quality.id_for_label }}" name="{{ form.solution_quality.html_name }}">
+                                {% for choice in form.solution_quality.field.choices %}
+                                    <option value="{{ choice.0 }}"{% if form.solution_quality.value == choice.0 %} selected{% endif %}>{{ choice.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    {% elif application.innovation_type == 'process' %}
+                        <div class="form-group">
+                            <label for="{{ form.novelty_level.id_for_label }}">
+                                <i class="icon-star"></i> Уровень новизны
+                            </label>
+                            <select class="form-control" id="{{ form.novelty_level.id_for_label }}" name="{{ form.novelty_level.html_name }}">
+                                <option value="0"{% if form.novelty_level.value == 0 %} selected{% endif %}>0</option>
+                                <option value="1"{% if form.novelty_level.value == 1 %} selected{% endif %}>1</option>
+                                <option value="2"{% if form.novelty_level.value == 2 %} selected{% endif %}>2</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.scalability.id_for_label }}">
+                                <i class="icon-scale"></i> Масштабы возможного внедрения
+                            </label>
+                            <select class="form-control" id="{{ form.scalability.id_for_label }}" name="{{ form.scalability.html_name }}">
+                                <option value="1"{% if form.scalability.value == 1 %} selected{% endif %}>1</option>
+                                <option value="2"{% if form.scalability.value == 2 %} selected{% endif %}>2</option>
+                                <option value="3"{% if form.scalability.value == 3 %} selected{% endif %}>3</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.implementation_scale.id_for_label }}">
+                                <i class="icon-implement"></i> Масштаб фактического внедрения
+                            </label>
+                            <select class="form-control" id="{{ form.implementation_scale.id_for_label }}" name="{{ form.implementation_scale.html_name }}">
+                                <option value="0"{% if form.implementation_scale.value == 0 %} selected{% endif %}>0</option>
+                                <option value="1"{% if form.implementation_scale.value == 1 %} selected{% endif %}>1</option>
+                                <option value="2"{% if form.implementation_scale.value == 2 %} selected{% endif %}>2</option>
+                                <option value="3"{% if form.implementation_scale.value == 3 %} selected{% endif %}>3</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.effect_on_indicators.id_for_label }}">
+                                <i class="icon-effect"></i> Оценка эффекта на показатели ПКР
+                            </label>
+                            <select class="form-control" id="{{ form.effect_on_indicators.id_for_label }}" name="{{ form.effect_on_indicators.html_name }}">
+                                <option value="0"{% if form.effect_on_indicators.value == 0 %} selected{% endif %}>0</option>
+                                <option value="1"{% if form.effect_on_indicators.value == 1 %} selected{% endif %}>1</option>
+                                <option value="2"{% if form.effect_on_indicators.value == 2 %} selected{% endif %}>2</option>
+                            </select>
+                        </div>
+                    {% elif application.innovation_type == 'scientific' %}
+                        <div class="form-group">
+                            <label for="{{ form.scalability.id_for_label }}">
+                                <i class="icon-scale"></i> Масштабы возможного внедрения
+                            </label>
+                            <select class="form-control" id="{{ form.scalability.id_for_label }}" name="{{ form.scalability.html_name }}">
+                                <option value="0"{% if form.scalability.value == 0 %} selected{% endif %}>0</option>
+                                <option value="1"{% if form.scalability.value == 1 %} selected{% endif %}>1</option>
+                                <option value="2"{% if form.scalability.value == 2 %} selected{% endif %}>2</option>
+                                <option value="3"{% if form.scalability.value == 3 %} selected{% endif %}>3</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.financial_effect.id_for_label }}">
+                                <i class="icon-money"></i> Оценка финансового эффекта
+                            </label>
+                            <select class="form-control" id="{{ form.financial_effect.id_for_label }}" name="{{ form.financial_effect.html_name }}">
+                                <option value="0"{% if form.financial_effect.value == 0 %} selected{% endif %}>0</option>
+                                <option value="1"{% if form.financial_effect.value == 1 %} selected{% endif %}>1</option>
+                                <option value="2"{% if form.financial_effect.value == 2 %} selected{% endif %}>2</option>
+                                <option value="3"{% if form.financial_effect.value == 3 %} selected{% endif %}>3</option>
+                                <option value="4"{% if form.financial_effect.value == 4 %} selected{% endif %}>4</option>
+                                <option value="5"{% if form.financial_effect.value == 5 %} selected{% endif %}>5</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="{{ form.comparison_with_analogues.id_for_label }}">
+                                <i class="icon-compare"></i> Сравнение с аналогами
+                            </label>
+                            <select class="form-control" id="{{ form.comparison_with_analogues.id_for_label }}" name="{{ form.comparison_with_analogues.html_name }}">
+                                <option value="0"{% if form.comparison_with_analogues.value == 0 %} selected{% endif %}>0</option>
+                                <option value="1"{% if form.comparison_with_analogues.value == 1 %} selected{% endif %}>1</option>
+                                <option value="2"{% if form.comparison_with_analogues.value == 2 %} selected{% endif %}>2</option>
+                            </select>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="form-group">
+                        <label>Итого: <span id="max-score-label">({{ max_score }} баллов)</span></label>
+                        <input type="text" class="form-control" id="total-score" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.comments.id_for_label }}">
+                            <i class="icon-comment"></i> Обоснование оценки
+                        </label>
+                        <textarea class="form-control" id="{{ form.comments.id_for_label }}" name="{{ form.comments.html_name }}" rows="5">{{ form.comments.value|default:"" }}</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.decision.id_for_label }}">
+                            <i class="icon-decision"></i> Решение
+                        </label>
+                        <select class="form-control" id="{{ form.decision.id_for_label }}" name="{{ form.decision.html_name }}">
+                            <option value="approved"{% if form.decision.value == 'approved' %} selected{% endif %}>Принять</option>
+                            <option value="rejected"{% if form.decision.value == 'rejected' %} selected{% endif %}>Отклонить</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="icon-save"></i> Сохранить оценку
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Селекторы полей оценки
+        const scoreFields = [
+            'relevance',
+            'cost_effectiveness',
+            'solution_quality',
+            'novelty_level',
+            'scalability',
+            'implementation_scale',
+            'effect_on_indicators',
+            'financial_effect',
+            'comparison_with_analogues'
+        ];
+
+        // Селектор поля итоговой оценки
+        const totalScoreField = document.getElementById('total-score');
+        const maxScoreLabel = document.getElementById('max-score-label');
+
+        // Функция для вычисления итоговой оценки
+        function calculateTotalScore() {
+            let total = 0;
+            scoreFields.forEach(fieldName => {
+                const field = document.querySelector(`select[name="${fieldName}"], input[name="${fieldName}"]`);
+                if (field && field.value) {
+                    total += parseInt(field.value, 10);
+                }
+            });
+            totalScoreField.value = total;
+        }
+
+        // Функция для вычисления максимального балла
+        function calculateMaxScore() {
+            let maxScore = 0;
+            scoreFields.forEach(fieldName => {
+                const field = document.querySelector(`select[name="${fieldName}"], input[name="${fieldName}"]`);
+                if (field) {
+                    const options = Array.from(field.options);
+                    const maxOption = options.reduce((max, option) => {
+                        return parseInt(option.value, 10) > max ? parseInt(option.value, 10) : max;
+                    }, 0);
+                    maxScore += maxOption;
+                }
+            });
+            maxScoreLabel.textContent = `(максимум ${maxScore})`;
+        }
+
+        // Вызываем функции при загрузке страницы
+        calculateTotalScore();
+        calculateMaxScore();
+
+        // Добавляем обработчики событий для полей оценки
+        scoreFields.forEach(fieldName => {
+            const field = document.querySelector(`select[name="${fieldName}"], input[name="${fieldName}"]`);
+            if (field) {
+                field.addEventListener('change', function() {
+                    calculateTotalScore();
+                });
+            }
+        });
+    });
+</script>
+
+<style>
+    @media (max-width: 768px) {
+        .review-container {
+            flex-direction: column;
+        }
+        
+        .review-form, .application-details {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .detail-group {
+            margin-bottom: 20px;
+        }
+        
+        .detail-item {
+            margin-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+    }
+</style>
+
+{% endblock %}

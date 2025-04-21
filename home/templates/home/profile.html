@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">Личный кабинет</div>
+    <div class="card-body">
+        <!-- Профиль -->
+        <form method="post">
+            {% csrf_token %}
+            <h4>Личные данные</h4>
+            {{ profile_form.as_p }}
+            <button type="submit" name="update_profile" class="btn btn-primary">Сохранить</button>
+        </form>
+
+        <!-- Смена email -->
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <h4>Смена email</h4>
+            <p>Текущий email: {{ user.email }}</p>
+            {{ email_form.as_p }}
+            <button type="submit" name="change_email" class="btn btn-warning">Сменить email</button>
+        </form>
+
+        <!-- Смена пароля -->
+        <form method="post" class="mt-4">
+            {% csrf_token %}
+            <h4>Смена пароля</h4>
+            {{ password_form.as_p }}
+            <button type="submit" name="change_password" class="btn btn-danger">Сменить пароль</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

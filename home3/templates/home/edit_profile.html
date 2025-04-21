@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Редактировать профиль{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="card shadow-sm">
+    <div class="card-header bg-secondary text-white">
+      <h3>Редактировать основную информацию</h3>
+    </div>
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="id_first_name" class="form-label">Имя</label>
+          <input type="text" name="first_name" class="form-control" id="id_first_name" value="{{ form.first_name.value }}" required>
+        </div>
+        <div class="mb-3">
+          <label for="id_last_name" class="form-label">Фамилия</label>
+          <input type="text" name="last_name" class="form-control" id="id_last_name" value="{{ form.last_name.value }}" required>
+        </div>
+        <div class="mb-3">
+          <label for="id_middle_name" class="form-label">Отчество</label>
+          <input type="text" name="middle_name" class="form-control" id="id_middle_name" value="{{ form.middle_name.value }}">
+        </div>
+        <div class="mb-3">
+          <label for="id_phone" class="form-label">Номер телефона</label>
+          <input type="text" name="phone" class="form-control" id="id_phone" value="{{ form.phone.value }}" required>
+          {% if form.phone.errors %}
+            <div class="text-danger">{{ form.phone.errors }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

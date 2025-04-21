@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Назначить эксперта</h1>
+<p>Заявка: {{ application.title }}</p>
+<form method="post">
+    {% csrf_token %}
+    <label>Выберите эксперта:</label>
+    <select name="expert">
+        {% for expert in experts %}
+            <option value="{{ expert.id }}">{{ expert.username }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Назначить</button>
+</form>
+{% endblock %}

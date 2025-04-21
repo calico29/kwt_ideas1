@@ -1,0 +1,103 @@
+DEBUG 2025-04-02 23:37:16,677 middleware 
+            Session Check:
+            - Path: /logout/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:37:16.677008+00:00
+        
+DEBUG 2025-04-02 23:37:16,692 middleware 
+            Session Check:
+            - Path: /
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:37:16.692379+00:00
+        
+DEBUG 2025-04-02 23:37:17,678 middleware 
+            Session Check:
+            - Path: /accounts/login/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:37:17.678349+00:00
+        
+DEBUG 2025-04-02 23:37:20,434 middleware 
+            Session Check:
+            - Path: /accounts/login/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:37:20.434084+00:00
+        
+DEBUG 2025-04-02 23:37:21,315 middleware 
+            Session Check:
+            - Path: /dashboard/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:37:21.315370+00:00
+        
+DEBUG 2025-04-02 23:37:21,319 middleware Redirecting to 2FA - not verified
+DEBUG 2025-04-02 23:37:21,328 middleware 
+            Session Check:
+            - Path: /account/2fa/authenticate/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:37:21.328733+00:00
+        
+DEBUG 2025-04-02 23:37:27,189 views New 2FA code sent to autor1@example.com
+DEBUG 2025-04-02 23:37:32,445 middleware 
+            Session Check:
+            - Path: /account/2fa/authenticate/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:37:32.444971+00:00
+        
+DEBUG 2025-04-02 23:37:32,464 views 2FA successfully verified
+DEBUG 2025-04-02 23:37:32,477 middleware 
+            Session Check:
+            - Path: /dashboard/
+            - Remember Device: None
+            - Device Verified: True
+            - Session Expiry: 2025-05-02 20:37:32.477424+00:00
+        
+DEBUG 2025-04-02 23:39:02,620 middleware 
+            Session Check:
+            - Path: /logout/
+            - Remember Device: None
+            - Device Verified: True
+            - Session Expiry: 2025-05-02 20:39:02.620660+00:00
+        
+DEBUG 2025-04-02 23:39:02,638 middleware 
+            Session Check:
+            - Path: /
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:39:02.638055+00:00
+        
+DEBUG 2025-04-02 23:39:03,395 middleware 
+            Session Check:
+            - Path: /accounts/login/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:39:03.395744+00:00
+        
+DEBUG 2025-04-02 23:39:04,887 middleware 
+            Session Check:
+            - Path: /accounts/login/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:39:04.887207+00:00
+        
+DEBUG 2025-04-02 23:39:05,747 middleware 
+            Session Check:
+            - Path: /dashboard/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:39:05.747487+00:00
+        
+DEBUG 2025-04-02 23:39:05,750 middleware Redirecting to 2FA - not verified
+DEBUG 2025-04-02 23:39:05,758 middleware 
+            Session Check:
+            - Path: /account/2fa/authenticate/
+            - Remember Device: None
+            - Device Verified: None
+            - Session Expiry: 2025-05-02 20:39:05.758784+00:00
+        
+DEBUG 2025-04-02 23:39:12,359 views New 2FA code sent to autor1@example.com

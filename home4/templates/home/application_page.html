@@ -1,0 +1,261 @@
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Удаляем пустой option
+    document.querySelectorAll('#id_innovation_type option[value=""]').forEach(opt => opt.remove());
+    
+    // Основная функция переключения блоков
+    function toggleFields() {
+        const typeSelect = document.getElementById("id_innovation_type");
+        const selectedType = typeSelect.value;
+
+        document.querySelectorAll(".extra-field").forEach(field => {
+            field.style.display = "none";
+            field.querySelectorAll('input, select, textarea').forEach(input => {
+                input.required = false;
+            });
+        });
+
+        if (selectedType) {
+            const activeBlock = document.getElementById(selectedType + "_fields");
+            if (activeBlock) {
+                activeBlock.style.display = "block";
+                activeBlock.querySelectorAll('input, select, textarea').forEach(input => {
+                    input.required = input.dataset.required === 'true';
+                });
+            }
+        }
+    }
+
+    // Обработчик для научного продукта
+    function handleScientificProductType() {
+        const productType = document.getElementById('id_scientific_product_type').value;
+        const readinessField = document.getElementById('id_readiness_level').closest('.field-group');
+        const patentsLabel = document.querySelector('label[for="id_patents_links"]');
+
+        if (productType === 'product_1') {
+            readinessField.style.display = 'block';
+            if (patentsLabel) patentsLabel.innerHTML = 'Статьи, доклады, патенты, «ноу-хау» (при наличии) <span class="required-star">*</span>';
+        } else {
+            readinessField.style.display = 'none';
+            if (patentsLabel) patentsLabel.innerHTML = 'Номер и дата документа';
+        }
+    }
+
+    // Инициализация
+    toggleFields();
+    document.getElementById("id_innovation_type").addEventListener("change", toggleFields);
+    
+    // Для научного типа
+    const scientificProductSelect = document.getElementById('id_scientific_product_type');
+    if (scientificProductSelect) {
+        scientificProductSelect.addEventListener('change', handleScientificProductType);
+        handleScientificProductType();
+    }
+});
+</script>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <!-- Общие поля -->
+    <div class="field-group">
+        <label>{{ form.application_id.label }}</label>
+        {{ form.application_id }}
+    </div>
+    
+    <div class="field-group">
+        <label>{{ form.title.label }}<span class="required-star">*</span></label>
+        {{ form.title }}
+        <small>{{ form.title.help_text }}</small>
+    </div>
+
+    <div class="field-group">
+        <label>{{ form.phone.label }}<span class="required-star">*</span></label>
+        {{ form.phone }}
+        <small>{{ form.phone.help_text }}</small>
+    </div>
+
+    <div class="field-group">
+        <label>{{ form.description.label }}<span class="required-star">*</span></label>
+        {{ form.description }}
+        <small>{{ form.description.help_text }}</small>
+    </div>
+
+    <div class="field-group">
+        <label>{{ form.innovation_type.label }}<span class="required-star">*</span></label>
+        {{ form.innovation_type }}
+    </div>
+
+    <!-- Образовательная инновация -->
+    <div id="educational_fields" class="extra-field">
+        <div class="field-group">
+            {{ form.authors.label_tag }}
+            {{ form.authors }}
+            <small>{{ form.authors.help_text }}</small>
+        </div>
+        
+        <div class="field-group">
+            {{ form.product_type.label_tag }}
+            {{ form.product_type }}
+        </div>
+
+        <div class="field-group">
+            {{ form.usage_type.label_tag }}
+            {{ form.usage_type }}
+        </div>
+
+        <div class="field-group">
+            {{ form.resource_link.label_tag }}
+            {{ form.resource_link }}
+        </div>
+
+        <div class="field-group">
+            {{ form.educational_files.label_tag }}
+            {{ form.educational_files }}
+            <small>{{ form.educational_files.help_text }}</small>
+        </div>
+    </div>
+
+    <!-- Scientific Innovation Fields -->
+    <div id="scientific_fields" class="extra-field">
+        <div class="field-group">
+            {{ form.scientific_product_type.label_tag }}
+            {{ form.scientific_product_type }}
+        </div>
+        <div class="field-group">
+            {{ form.patents_links.label_tag }}
+            {{ form.patents_links }}
+        </div>
+        <div class="field-group">
+            {{ form.readiness_level.label_tag }}
+            {{ form.readiness_level }}
+            <small>{{ form.readiness_level.help_text }}</small>
+        </div>
+        <div class="field-group">
+            {{ form.department.label_tag }}
+            {{ form.department }}
+        </div>
+        <div class="field-group">
+            {{ form.scientific_files.label_tag }}
+            {{ form.scientific_files }}
+            <small>{{ form.scientific_files.help_text }}</small>
+        </div>
+        <div class="field-group">
+            {{ form.research_group.label_tag }}
+            {{ form.research_group }}
+            <small>Указывается шифр научной группы</small>
+        </div>
+    </div>
+
+    <!-- Process Innovation Fields -->
+    <div id="process_fields" class="extra-field">
+        <div class="field-group">
+            {{ form.process_innovation_type.label_tag }}
+            {{ form.process_innovation_type }}
+        </div>
+        <div class="field-group">
+            {{ form.implementation_steps.label_tag }}
+            {{ form.implementation_steps }}
+        </div>
+        <div class="field-group">
+            {{ form.process_files.label_tag }}
+            {{ form.process_files }}
+        </div>
+    </div>
+
+    <!-- Proposal Innovation Fields -->
+    <div id="proposal_fields" class="extra-field">
+        <div class="field-group">
+            {{ form.problem_description.label_tag }}
+            {{ form.problem_description }}
+        </div>
+        <div class="field-group">
+            {{ form.solution.label_tag }}
+            {{ form.solution }}
+        </div>
+        <div class="field-group">
+            {{ form.expected_effects.label_tag }}
+            {{ form.expected_effects }}
+        </div>
+        <div class="field-group">
+            {{ form.proposal_files.label_tag }}
+            {{ form.proposal_files }}
+        </div>
+    </div>
+
+    <button type="submit">Отправить</button>
+</form>
+
+<style>
+    /* Сохраняем оригинальные стили */
+    form {
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .field-group {
+        margin-bottom: 15px;
+    }
+    
+    label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    input, select, textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        margin-top: 5px;
+    }
+
+    small {
+        display: block;
+        color: #666;
+        margin-top: 5px;
+        font-size: 0.9em;
+    }
+
+    .extra-field {
+        display: none;
+        padding: 15px;
+        background: #fff;
+        border: 1px solid #eee;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    button {
+        width: 100%;
+        background: #007BFF;
+        color: white;
+        padding: 12px;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-top: 20px;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    button:hover {
+        background: #0056b3;
+    }
+
+    .required-star {
+        color: red;
+        margin-left: 3px;
+    }
+
+    .error {
+        color: red;
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+</style>
